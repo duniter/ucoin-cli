@@ -1,7 +1,7 @@
-# nodecoin
+# vucoin
 
-NPM module for accessing nodecoin server trough HTTP API.
+Node.js module to access ucoin server through its HTTP API.
 
 # License
 
-This software is provided under [MIT license](https://raw.github.com/c-geek/merkle/master/LICENSE).
+This software is provided under [MIT license](https://raw.github.com/c-geek/vucoin/master/LICENSE).
