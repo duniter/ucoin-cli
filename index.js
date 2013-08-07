@@ -2,12 +2,9 @@ var _       = require('underscore');
 var fs      = require('fs');
 var openpgp = require('./openpgp').openpgp;
 
-var pub = fs.readFileSync('/home/cgeek/dev/vucoin/looolcat.pub', 'utf8');
-// console.log(pub);
 openpgp.init();
-openpgp.keyring.importPublicKey(pub);
 
-module.exports = function(server){
+module.exports = function(server, intialized){
 
   this.pks = {
 
@@ -41,6 +38,20 @@ module.exports = function(server){
       }
     }, _(vucoin_result).partial(callback));
   }
+
+  var that = this;
+  require('request')('http://' + server + '/ucg/pubkey', function (err, res, body) {
+    try{
+      if(err)
+        throw new Error(err);
+      openpgp.keyring.importPublicKey(body);
+      console.log("Public key imported.");
+      intialized(that);
+    }
+    catch(ex){
+      throw new Error("Remote key could not be retrieved.");
+    }
+  });
 
   return this;
 }

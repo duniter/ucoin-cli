@@ -15,26 +15,29 @@ program
 program.node = program.node || "localhost";
 program.port = program.port || "8081";
 
-var node = vucoin(program.node + ':' + program.port);
+vucoin(program.node + ':' + program.port, function (node) {
 
-// pks/add
-if(program.add && program.signature){
-  node.pks.add(program.add, program.signature, proxy(function (res) {
-    console.log("Posted key '" + res.fingerprint + "' of " + res.name + ' (' + res.comment + ')' + res.email);
-  }));
-  return;
-}
+  // pks/add
+  if(program.add && program.signature){
+    node.pks.add(program.add, program.signature, proxy(function (res) {
+      console.log("Posted key '" + res.fingerprint + "' of " + res.name + ' (' + res.comment + ')' + res.email);
+    }));
+    return;
+  }
 
-// pks/lookup
-if(program.lookup != undefined){
-  node.pks.lookup(program.lookup, proxy(function (keys) {
-    console.log("Lookup '" + program.lookup + "' keys:");
-    for (var i = 0; i < keys.length; i++) {
-      console.log(keys[i].fingerprint);
-    };
-  }));
-  return;
-}
+  // pks/lookup
+  if(program.lookup != undefined){
+    node.pks.lookup(program.lookup, proxy(function (res) {
+      var keys = res.keys;
+      console.log("Lookup '" + program.lookup + "' keys:");
+      for (var i = 0; i < keys.length; i++) {
+        console.log(keys[i].fingerprint);
+      };
+    }));
+    return;
+  }
+  
+});
 
 function proxy(callback){
   return function (err, res) {

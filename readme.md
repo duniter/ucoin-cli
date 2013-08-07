@@ -5,7 +5,11 @@ Node.js module to access ucoin server through its HTTP API.
 ## Usage
 
 ```js
-var node = require('vucoin')('localhost:8081');
+var vucoin = require('vucoin');
+vucoin('localhost:8081', function (node) {
+
+  // Public key imported, exchanges are secure
+});
 ```
 
 ```js
