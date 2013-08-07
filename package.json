@@ -1,0 +1,45 @@
+{
+  "name": "vucoin",
+  "version": "0.0.1",
+  "description": "Node.js module to access ucoin server through its HTTP API",
+  "main": "bin/vucoin",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:c-geek/vucoin.git"
+  },
+  "keywords": [
+    "ucoin",
+    "openudc",
+    "crypto-currency"
+  ],
+  "author": "Cedric Moreau <cem.moreau@gmail.com>",
+  "license": "MIT",
+  "readmeFilename": "readme.md",
+  "bugs": {
+    "url": "https://github.com/c-geek/vucoin/issues"
+  },
+  "dependencies": {
+    "request": "",
+    "commander": "",
+    "async": "",
+    "sha1": "",
+    "merkle": "",
+    "hdc": ">= 0.0.6",
+    "underscore": ""
+  },
+  "devDependencies": {
+    "mocha": "",
+    "should": "",
+    "sha1": "",
+    "supertest": ""
+  },
+  "bin": {
+    "vucoin": "./bin/vucoin"
+  }
+}
