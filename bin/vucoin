@@ -4,7 +4,7 @@ var program = require('commander');
 var vucoin  = require('../index');
 
 program
-  .version('0.0.1')
+  .version('0.0.2')
   .option('--add <keyFile>', 'File of the key to submit.')
   .option('--lookup <search>', 'Search string')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
@@ -36,7 +36,7 @@ vucoin(program.node + ':' + program.port, function (node) {
     }));
     return;
   }
-  
+
 });
 
 function proxy(callback){
