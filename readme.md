@@ -1,6 +1,6 @@
 # vucoin
 
-Node.js module to access ucoin server through its HTTP API.
+Node.js module to access [ucoin](https://github.com/c-geek/ucoin) server through its HTTP API.
 
 ## Usage
 
