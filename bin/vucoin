@@ -1,0 +1,47 @@
+#!/usr/bin/env node
+var request = require('request');
+var program = require('commander');
+var vucoin  = require('../index');
+
+program
+  .version('0.0.1')
+  .option('--add <keyFile>', 'File of the key to submit.')
+  .option('--lookup <search>', 'Search string')
+  .option('-s, --signature <sigFile>', 'File of a signature to append.')
+  .option('-n, --node <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
+  .option('-p, --port <port>', 'Port of the node to contact.')
+  .parse(process.argv);
+
+program.node = program.node || "localhost";
+program.port = program.port || "8081";
+
+var node = vucoin(program.node + ':' + program.port);
+
+// pks/add
+if(program.add && program.signature){
+  node.pks.add(program.add, program.signature, proxy(function (res) {
+    console.log("Posted key '" + res.fingerprint + "' of " + res.name + ' (' + res.comment + ')' + res.email);
+  }));
+  return;
+}
+
+// pks/lookup
+if(program.lookup != undefined){
+  node.pks.lookup(program.lookup, proxy(function (keys) {
+    console.log("Lookup '" + program.lookup + "' keys:");
+    for (var i = 0; i < keys.length; i++) {
+      console.log(keys[i].fingerprint);
+    };
+  }));
+  return;
+}
+
+function proxy(callback){
+  return function (err, res) {
+    if(err){
+      console.error(err);
+      return;
+    }
+    else callback(res);
+  }
+}
