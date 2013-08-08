@@ -4,7 +4,7 @@ var program = require('commander');
 var vucoin  = require('../index');
 
 program
-  .version('0.0.4')
+  .version('0.0.5')
   .option('--add <keyFile>', 'File of the key to submit.')
   .option('--lookup <search>', 'Search string')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
