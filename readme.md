@@ -42,7 +42,7 @@ $ vucoin --help
     --add <keyFile>            File of the key to submit.
     --lookup <search>          Search string
     -s, --signature <sigFile>  File of a signature to append.
-    -n, --node <address>       DNS, IPv4 or IPv6 address of the node to contact.
+    -h, --host <address>       DNS, IPv4 or IPv6 address of the node to contact.
     -p, --port <port>          Port of the node to contact.
 ```
 

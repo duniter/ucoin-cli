@@ -4,7 +4,10 @@ var openpgp = require('./openpgp').openpgp;
 
 openpgp.init();
 
-module.exports = function(server, intialized){
+module.exports = function(host, port, intialized){
+
+  this.host = host;
+  this.port = port;
 
   this.pks = {
 
@@ -21,9 +24,16 @@ module.exports = function(server, intialized){
     }
   }
 
+  function server() {
+    var server = host.match(/:/) ? '[' + host + ']' : host;
+    server += ':' + port;
+    console.error(server);
+    return server;
+  }
+
   function get(url, callback) {
     return require('request').get({
-      "url": "http://" + server + url,
+      "url": "http://" + server() + url,
       "headers": {
         "Accept": "multipart/signed"
       }
@@ -32,7 +42,7 @@ module.exports = function(server, intialized){
 
   function post(url, callback) {
     return require('request').post({
-      "url": "http://" + server + url,
+      "url": "http://" + server() + url,
       "headers": {
         "Accept": "multipart/signed"
       }
@@ -41,7 +51,7 @@ module.exports = function(server, intialized){
 
   // ====== Initialization ======
   var that = this;
-  require('request')('http://' + server + '/ucg/pubkey', function (err, res, body) {
+  require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
     try{
       if(err)
         throw new Error(err);

@@ -8,14 +8,14 @@ program
   .option('--add <keyFile>', 'File of the key to submit.')
   .option('--lookup <search>', 'Search string')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
-  .option('-n, --node <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
+  .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
   .parse(process.argv);
 
-program.node = program.node || "localhost";
+program.host = program.host || "localhost";
 program.port = program.port || "8081";
 
-vucoin(program.node + ':' + program.port, function (err, node) {
+vucoin(program.host, program.port, function (err, node) {
 
   if(err){
     console.error(err);
