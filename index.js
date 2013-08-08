@@ -39,6 +39,7 @@ module.exports = function(server, intialized){
     }, _(vucoin_result).partial(callback));
   }
 
+  // ====== Initialization ======
   var that = this;
   require('request')('http://' + server + '/ucg/pubkey', function (err, res, body) {
     try{
@@ -46,10 +47,10 @@ module.exports = function(server, intialized){
         throw new Error(err);
       openpgp.keyring.importPublicKey(body);
       console.log("Public key imported.");
-      intialized(that);
+      intialized(null, that);
     }
     catch(ex){
-      throw new Error("Remote key could not be retrieved.");
+      intialized("Remote key could not be retrieved.");
     }
   });
 

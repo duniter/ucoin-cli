@@ -15,7 +15,12 @@ program
 program.node = program.node || "localhost";
 program.port = program.port || "8081";
 
-vucoin(program.node + ':' + program.port, function (node) {
+vucoin(program.node + ':' + program.port, function (err, node) {
+
+  if(err){
+    console.error(err);
+    return;
+  }
 
   // pks/add
   if(program.add && program.signature){
