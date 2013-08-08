@@ -4,7 +4,12 @@ var openpgp = require('./openpgp').openpgp;
 
 openpgp.init();
 
-module.exports = function(host, port, intialized){
+module.exports = function(host, port, authenticated, intialized){
+
+  if(!intialized){
+    intialized = authenticated;
+    authenticated = false;
+  }
 
   this.host = host;
   this.port = port;
@@ -14,8 +19,8 @@ module.exports = function(host, port, intialized){
     add: function (key, signature, done) {
       post('/pks/add', done)
       .form({
-        "keytext": fs.createReadStream(key),
-        "keysign": fs.createReadStream(signature)
+        "keytext": fs.readFileSync(key, 'utf8'),
+        "keysign": fs.readFileSync(signature, 'utf8')
       });
     },
 
@@ -30,54 +35,66 @@ module.exports = function(host, port, intialized){
     return server;
   }
 
-  function get(url, callback) {
-    return require('request').get({
+  function requestHead(url) {
+    return authenticated ? {
       "url": "http://" + server() + url,
       "headers": {
         "Accept": "multipart/signed"
       }
-    }, _(vucoin_result).partial(callback));
+    } : {
+      "url": "http://" + server() + url
+    };
+  }
+
+  function requestSuccess(callback) {
+    return _(vucoin_result).partial(callback);
+  }
+
+  function get(url, callback) {
+    return require('request').get(requestHead(url), requestSuccess(callback));
   }
 
   function post(url, callback) {
-    return require('request').post({
-      "url": "http://" + server() + url,
-      "headers": {
-        "Accept": "multipart/signed"
+    return require('request').post(requestHead(url), requestSuccess(callback));
+  }
+
+  function vucoin_result(done, err, res, body) {
+    var result = null;
+    if(err)
+      done(err);
+    else{
+      if(res.statusCode == 200){
+        if(authenticated)
+          verifyResponse(res, body, done);
+        else
+          done(null, JSON.parse(body));
       }
-    }, _(vucoin_result).partial(callback));
+      else{
+        errorCode(res, body, done);
+      }
+    }
   }
 
   // ====== Initialization ======
-  var that = this;
-  require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
-    try{
-      if(err)
-        throw new Error(err);
-      openpgp.keyring.importPublicKey(body);
-      console.log("Public key imported.");
-      intialized(null, that);
-    }
-    catch(ex){
-      intialized("Remote key could not be retrieved.");
-    }
-  });
+  if(authenticated){
+    var that = this;
+    console.log("Looking for public key...");
+    require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
+      try{
+        if(err)
+          throw new Error(err);
+        openpgp.keyring.importPublicKey(body);
+        console.log("Public key imported.");
+        intialized(null, that);
+      }
+      catch(ex){
+        intialized("Remote key could not be retrieved.");
+      }
+    });
+  }
+  else intialized(null, this);
 
   return this;
-}
-
-function vucoin_result(done, err, res, body) {
-  var result = null;
-  if(err)
-    done(err);
-  else{
-    if(res.statusCode == 200){
-      verifyResponse(res, body, done);
-    }
-    else{
-      errorCode(res, body, done);
-    }
-  }
 }
 
 function verifyResponse(res, body, done) {
