@@ -27,7 +27,6 @@ module.exports = function(host, port, intialized){
   function server() {
     var server = host.match(/:/) ? '[' + host + ']' : host;
     server += ':' + port;
-    console.error(server);
     return server;
   }
 
