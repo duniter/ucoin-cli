@@ -7,6 +7,7 @@ program
   .version('0.0.6')
   .option('--add <keyFile>', 'File of the key to submit.')
   .option('--lookup <search>', 'Search string')
+  .option('--peering', 'View peering informations')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
@@ -38,6 +39,23 @@ vucoin(program.host, program.port, function (err, node) {
       for (var i = 0; i < keys.length; i++) {
         console.log(keys[i].fingerprint);
       };
+    }));
+    return;
+  }
+
+  // ucg/peering
+  if(program.peering){
+    node.ucg.peering(proxy(function (res) {
+      console.log("Currency: ", res.currency);
+      console.log("Public key FPR: ", res.key);
+      console.log("IPv4: ", res.ipv4);
+      console.log("IPv6: ", res.ipv6);
+      console.log("Listening port: ", res.port);
+      console.log("Peers number: ", res.peers.length);
+      console.log("Peers list: ");
+      res.peers.forEach(function (peer) {
+        console.log(JSON.stringify(peer));
+      });
     }));
     return;
   }

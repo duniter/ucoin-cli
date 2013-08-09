@@ -29,6 +29,13 @@ module.exports = function(host, port, authenticated, intialized){
     }
   }
 
+  this.ucg = {
+
+    peering: function (done) {
+      get('/ucg/peering', done);
+    }
+  }
+
   function server() {
     var server = host.match(/:/) ? '[' + host + ']' : host;
     server += ':' + port;
