@@ -4,7 +4,7 @@ var program = require('commander');
 var vucoin  = require('../index');
 
 program
-  .version('0.0.7')
+  .version('0.0.8')
   .option('--add <keyFile>', 'File of the key to submit.')
   .option('--lookup <search>', 'Search string')
   .option('--peering', 'View peering informations')
