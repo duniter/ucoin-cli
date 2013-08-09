@@ -48,9 +48,8 @@ vucoin(program.host, program.port, function (err, node) {
     node.ucg.peering(proxy(function (res) {
       console.log("Currency: ", res.currency);
       console.log("Public key FPR: ", res.key);
-      console.log("IPv4: ", res.ipv4);
-      console.log("IPv6: ", res.ipv6);
-      console.log("Listening port: ", res.port);
+      console.log("Remote host: ", res.remote.host);
+      console.log("Remote port: ", res.remote.port);
       console.log("Peers number: ", res.peers.length);
       console.log("Peers list: ");
       res.peers.forEach(function (peer) {
