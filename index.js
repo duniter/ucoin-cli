@@ -36,6 +36,22 @@ module.exports = function(host, port, authenticated, intialized){
     }
   }
 
+  this.hdc = {
+
+    community: {
+
+      join: function (membership, done) {
+        var ms = fs.readFileSync(membership, 'utf8');
+        var sigIndex = ms.indexOf("-----BEGIN");
+        post('/hdc/community/join', done)
+        .form({
+          "request": ms.substring(0, sigIndex),
+          "signature": ms.substring(sigIndex)
+        });
+      }
+    }
+  }
+
   function server() {
     var server = host.match(/:/) ? '[' + host + ']' : host;
     server += ':' + port;

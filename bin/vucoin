@@ -8,6 +8,7 @@ program
   .option('--add <keyFile>', 'File of the key to submit.')
   .option('--lookup <search>', 'Search string')
   .option('--peering', 'View peering informations')
+  .option('--membership <request>', 'Signed membership request file to send.')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
@@ -55,6 +56,14 @@ vucoin(program.host, program.port, function (err, node) {
       res.peers.forEach(function (peer) {
         console.log(JSON.stringify(peer));
       });
+    }));
+    return;
+  }
+
+  // hdc/community/join
+  if(program.membership){
+    node.hdc.community.join(program.membership, proxy(function (res) {
+      console.log("Posted membership request '" + res.request.status + "' of Amendment #" + res.request.basis);
     }));
     return;
   }
