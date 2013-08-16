@@ -49,6 +49,22 @@ module.exports = function(host, port, authenticated, intialized){
           "signature": ms.substring(sigIndex)
         });
       }
+    },
+
+    amendments: {
+
+      votes: {
+
+        post: function (voteFile, done) {
+          var vote = fs.readFileSync(voteFile, 'utf8');
+          var sigIndex = vote.indexOf("-----BEGIN");
+          post('/hdc/amendments/votes', done)
+          .form({
+            "amendment": vote.substring(0, sigIndex),
+            "signature": vote.substring(sigIndex)
+          });
+        }
+      }
     }
   }
 
