@@ -57,6 +57,13 @@ module.exports = function(host, port, authenticated, intialized){
         get('/hdc/amendments/current', done);
       },
 
+      view: {
+
+        self: function (number, hash, done) {
+          get('/hdc/amendments/view/' + number + '-' + hash + '/self', done);
+        }
+      },
+
       votes: {
 
         post: function (voteFile, done) {

@@ -10,6 +10,7 @@ program
   .option('--lookup <search>', 'Search string')
   .option('--peering', 'View peering informations')
   .option('--current', 'View current amendment informations')
+  .option('--contract', 'View the whole contract\'s amendment suite')
   .option('--membership <request>', 'Signed membership request file to send.')
   .option('--vote <voteFile>', 'Vote file to send.')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
@@ -76,6 +77,27 @@ vucoin(program.host, program.port, function (err, node) {
     node.hdc.amendments.current(proxy(function (res) {
       var amendment = new hdc.Amendment(res.raw);
       console.log(amendment.getRaw());
+    }));
+    return;
+  }
+
+  // hdc/amendments/current
+  if(program.contract){
+    function getAmendment (number, hash) {
+      node.hdc.amendments.view.self(number, hash, proxy(function (res) {
+        var amendment = new hdc.Amendment(res.raw);
+        console.log(res.raw);
+        if(amendment.previousHash){
+          getAmendment(amendment.number - 1, amendment.previousHash);
+        }
+      }));
+    }
+    node.hdc.amendments.current(proxy(function (res) {
+      var amendment = new hdc.Amendment(res.raw);
+      console.log(amendment.getRaw());
+      if(amendment.previousHash){
+        getAmendment(amendment.number - 1, amendment.previousHash);
+      }
     }));
     return;
   }
