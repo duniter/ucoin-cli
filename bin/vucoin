@@ -13,6 +13,9 @@ program
   .option('--contract', 'View the whole contract\'s amendment suite')
   .option('--membership <request>', 'Signed membership request file to send.')
   .option('--vote <voteFile>', 'Vote file to send.')
+  .option('--forgejoin', 'Outputs a join membership, ready for signing.')
+  .option('--forgeactu', 'Outputs an actualize membership, ready for signing.')
+  .option('--forgeleave', 'Outputs a leave membership, ready for signing.')
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
@@ -26,6 +29,35 @@ vucoin(program.host, program.port, function (err, node) {
   if(err){
     console.error(err);
     return;
+  }
+
+  if(program.forgejoin){
+    forgeMembership('JOIN');
+    return;
+  }
+
+  if(program.forgeactu){
+    forgeMembership('ACTUALIZE');
+    return;
+  }
+
+  if(program.forgeleave){
+    forgeMembership('LEAVE');
+    return;
+  }
+
+  function forgeMembership (type) {
+    node.ucg.peering(proxy(function (peering) {
+      node.hdc.amendments.current(proxy(function (am) {
+        var amendment = new hdc.Amendment(am.raw);
+        var ms = new hdc.Membership();
+        ms.version = "1";
+        ms.currency = peering.currency;
+        ms.basis = am.number;
+        ms.status = type;
+        console.log(ms.getRaw());
+      }));
+    }));
   }
 
   // pks/add
