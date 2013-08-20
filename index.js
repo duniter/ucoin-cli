@@ -53,6 +53,10 @@ module.exports = function(host, port, authenticated, intialized){
 
     amendments: {
 
+      current: function (done) {
+        get('/hdc/amendments/current', done);
+      },
+
       votes: {
 
         post: function (voteFile, done) {
