@@ -106,6 +106,15 @@ case "$cmd" in
     echo "`$vucoin join --membership $2`"
     ;;
   
+  vote)
+    # Must have a readable file parameter
+    if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
+      echo "Parameter must be a readable file" >&2
+      exit 1
+    fi
+    echo "`$vucoin vote --votefile $2`"
+    ;;
+  
   pkadd)
     # Must have a readable file parameter
     if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
