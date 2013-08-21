@@ -24,7 +24,7 @@ program
   .description('Add signed public keys')
   .action(connect(function (node) {
     if(!program.key){
-      console.error("Requires --add parameter");
+      console.error("Requires --key parameter");
       return;
     }
     var key = fs.readFileSync(program.key, 'utf8');

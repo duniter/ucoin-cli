@@ -15,6 +15,11 @@ cat << EOF
     forge-leave Forge and sign a leaving membership
     current     Show current amendment of the contract
     contract    List all amendments constituting the contract
+    pkadd       Send a signed key file
+    lookup      Search for a public key
+    peering     Show peering informations
+    upstatus    Send a membership request
+    vote        Send a vote request
 
   Options:
     -s  uCoin server to look data in
@@ -91,6 +96,15 @@ sign()
 }
 
 case "$cmd" in
+  
+  pkadd)
+    # Must have a readable file parameter
+    if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
+      echo "Parameter must be a readable file" >&2
+      exit 1
+    fi
+    echo "`$vucoin pks-add --key $2`"
+    ;;
   
   contract)
     echo "`$vucoin am-contract`"
