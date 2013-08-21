@@ -90,25 +90,29 @@ Options:
 ```
 $ vucoin --help
 
-  Usage: vucoin [options]
+  Usage: vucoin [options] [command]
+
+  Commands:
+
+    pks [add|lookup]       Add or search for public keys.
+    peer                   Show remote peering informations.
+    am [current|contract]  View current amendment or list all amendments of the contract.
+    join                   Send join membership request.
+    vote                   Send vote request.
+    forge [join|actu|leave] Forge HDC data.
 
   Options:
 
     -h, --help                 output usage information
     -V, --version              output the version number
-    --add <keyFile>            File of the key to submit.
-    --lookup <search>          Search string
-    --peering                  View peering informations
-    --current                  View current amendment informations
-    --contract                 View the whole contract's amendment suite
+    --key <keyFile>            File of the key to submit.
+    --search <search>          Search string
     --membership <request>     Signed membership request file to send.
-    --vote <voteFile>          Vote file to send.
-    --forgejoin                Outputs a join membership, ready for signing.
-    --forgeactu                Outputs an actualize membership, ready for signing.
-    --forgeleave               Outputs a leave membership, ready for signing.
+    --votefile <voteFile>      Vote file to send.
     -s, --signature <sigFile>  File of a signature to append.
     -h, --host <address>       DNS, IPv4 or IPv6 address of the node to contact.
     -p, --port <port>          Port of the node to contact.
+
 
 ```
 

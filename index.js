@@ -66,8 +66,7 @@ module.exports = function(host, port, authenticated, intialized){
 
       votes: {
 
-        post: function (voteFile, done) {
-          var vote = fs.readFileSync(voteFile, 'utf8');
+        post: function (vote, done) {
           var sigIndex = vote.indexOf("-----BEGIN");
           post('/hdc/amendments/votes', done)
           .form({

@@ -13,6 +13,8 @@ cat << EOF
     forge-join  Forge and sign a joining membership
     forge-actu  Forge and sign an actualizing membership
     forge-leave Forge and sign a leaving membership
+    current     Show current amendment of the contract
+    contract    List all amendments constituting the contract
 
   Options:
     -s  uCoin server to look data in
@@ -73,22 +75,33 @@ fi
 
 sign()
 {
+  # If signature requires user
   command=$@
-  uuser="-u $user"
+  if [ ! -z $user ]; then
+    uuser="-u $user"
+  fi
+  echo $command
   forged=`$command`
-  signed="`$command | unix2dos | gpg -s -a $uuser --batch | unix2dos`"
-  echo "$forged" | unix2dos
-  echo "$signed" | unix2dos
+  # Signature only if no error happened
+  if [ $? -eq 0 ]; then
+    signed="`$command | unix2dos | gpg -s -a $uuser --no-tty | unix2dos`"
+    echo "$forged" | unix2dos
+    echo "$signed" | unix2dos
+  fi
 }
 
 case "$cmd" in
   
   contract)
-    echo "`$vucoin --contract`"
+    echo "`$vucoin am-contract`"
+    ;;
+  
+  current)
+    echo "`$vucoin am-current`"
     ;;
   
   peer)
-    echo "`$vucoin --peering`"
+    echo "`$vucoin peer`"
     ;;
 
   forge-cert)
@@ -100,15 +113,15 @@ case "$cmd" in
     ;;
 
   forge-join)
-    sign "$vucoin --forgejoin"
+    sign "$vucoin forge-join"
     ;;
 
   forge-actu)
-    sign "$vucoin --forgeactu"
+    sign "$vucoin forge-actu"
     ;;
 
   forge-leave)
-    sign "$vucoin --forgeleave"
+    sign "$vucoin forge-leave"
     ;;
 
   **)
