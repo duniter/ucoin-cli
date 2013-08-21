@@ -3,6 +3,7 @@ var request = require('request');
 var program = require('commander');
 var vucoin  = require('../index');
 var hdc     = require('hdc');
+var fs      = require('fs');
 
 program
   .version('0.0.9')
@@ -61,10 +62,32 @@ vucoin(program.host, program.port, function (err, node) {
   }
 
   // pks/add
-  if(program.add && program.signature){
-    node.pks.add(program.add, program.signature, proxy(function (res) {
-      console.log("Posted key '" + res.fingerprint + "' of " + res.name + ' (' + res.comment + ')' + res.email);
-    }));
+  if(program.add){
+    var key = fs.readFileSync(program.add, 'utf8');
+    var sign = null;
+    if(~key.indexOf('-----BEGIN PGP SIGNATURE-----')){
+      sign = key.substr(key.indexOf('-----BEGIN PGP SIGNATURE-----'));
+      key = key.substr(0, key.indexOf('-----BEGIN PGP SIGNATURE-----'));
+    }
+    else if(program.signature){
+      signature = fs.readFileSync(signature, 'utf8');
+    }
+    if(key && sign){
+      node.pks.add(key, sign, proxy(function (res) {
+        var name = res.name || '';
+        var comment = res.comment ? ' (' + res.comment + ')' : '';
+        var email = res.email ? ' <' + res.email + '>' : '';
+        console.log("Posted key '" + res.fingerprint + "' of " + name + comment + email);
+      }));
+    }
+    else{
+      if(!key){
+        console.error("Missing key in given file.");
+      }
+      if(!sign){
+        console.error("Missing signature in given file.");
+      }
+    }
     return;
   }
 

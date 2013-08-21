@@ -19,8 +19,8 @@ module.exports = function(host, port, authenticated, intialized){
     add: function (key, signature, done) {
       post('/pks/add', done)
       .form({
-        "keytext": fs.readFileSync(key, 'utf8'),
-        "keysign": fs.readFileSync(signature, 'utf8')
+        "keytext": key,
+        "keysign": signature
       });
     },
 
