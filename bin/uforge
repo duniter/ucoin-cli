@@ -10,6 +10,8 @@ cat << EOF
 
   Command:
     forge-join  Forge and sign a joining membership
+    forge-actu  Forge and sign an actualizing membership
+    forge-leave Forge and sign a leaving membership
 
   Options:
     -s  uCoin server to look data in
@@ -55,7 +57,7 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1\//g"`
+cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cwd="`pwd`/$cwd"
 cmd="$1"
 vucoin="$cwd/vucoin"
@@ -68,6 +70,15 @@ if [ ! -z $PORT ]; then
   vucoin="$vucoin -p $PORT"
 fi
 
+sign()
+{
+  command=$@
+  forged=`$command`
+  signed="`$command | unix2dos | gpg -s -a $user --batch | unix2dos`"
+  echo "$forged" | unix2dos
+  echo "$signed" | unix2dos
+}
+
 case "$cmd" in
   
   contract)
@@ -79,10 +90,15 @@ case "$cmd" in
     ;;
 
   forge-join)
-    join=`$vucoin --forgejoin`
-    sig="`$vucoin --forgejoin | unix2dos | gpg -s -a $user --batch | unix2dos`"
-    echo "$join" | unix2dos
-    echo "$sig" | unix2dos
+    sign "$vucoin --forgejoin"
+    ;;
+
+  forge-actu)
+    sign "$vucoin --forgeactu"
+    ;;
+
+  forge-leave)
+    sign "$vucoin --forgeleave"
     ;;
 
   **)
