@@ -97,6 +97,15 @@ sign()
 
 case "$cmd" in
   
+  upstatus)
+    # Must have a readable file parameter
+    if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
+      echo "Parameter must be a readable file" >&2
+      exit 1
+    fi
+    echo "`$vucoin join --membership $2`"
+    ;;
+  
   pkadd)
     # Must have a readable file parameter
     if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
