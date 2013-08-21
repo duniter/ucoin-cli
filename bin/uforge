@@ -106,6 +106,15 @@ case "$cmd" in
     echo "`$vucoin pks-add --key $2`"
     ;;
   
+  lookup)
+    # Must have a search parameter
+    if [ -z $2 ]; then
+      echo "Need a search parameter" >&2
+      exit 1
+    fi
+    echo "`$vucoin pks-lookup --search $2`"
+    ;;
+  
   contract)
     echo "`$vucoin am-contract`"
     ;;
