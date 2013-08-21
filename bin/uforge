@@ -1,0 +1,93 @@
+#!/bin/bash
+
+usage()
+{
+cat << EOF
+
+  usage: $0 [options] command
+
+  This script allow to forge HDC documents in accordance with a uCoin server data.
+
+  Command:
+    forge-join  Forge and sign a joining membership
+
+  Options:
+    -s  uCoin server to look data in
+    -p  uCoin server port
+    -u  PGP key to use for signature
+    -h  Help
+
+EOF
+}
+
+SERVER=
+PORT=
+user=
+while getopts :hs:p:u: OPT; do
+  case "$OPT" in
+    s)
+      SERVER="$OPTARG"
+      ;;
+    p)
+      PORT="$OPTARG"
+      ;;
+    u)
+      user="-u $OPTARG"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    ?)
+      echo "Bad parameters." >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Remove the switches we parsed above
+shift `expr $OPTIND - 1`
+
+if [ $# -eq 0 ]; then
+  echo "Need a command."
+  usage >&2
+  exit 1
+fi
+
+cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1\//g"`
+cwd="`pwd`/$cwd"
+cmd="$1"
+vucoin="$cwd/vucoin"
+
+if [ ! -z $SERVER ]; then
+  vucoin="$vucoin -s $SERVER"
+fi
+
+if [ ! -z $PORT ]; then
+  vucoin="$vucoin -p $PORT"
+fi
+
+case "$cmd" in
+  
+  contract)
+    echo "`$vucoin --contract`"
+    ;;
+  
+  peer)
+    echo "`$vucoin --peering`"
+    ;;
+
+  forge-join)
+    join=`$vucoin --forgejoin`
+    sig="`$vucoin --forgejoin | unix2dos | gpg -s -a $user --batch | unix2dos`"
+    echo "$join" | unix2dos
+    echo "$sig" | unix2dos
+    ;;
+
+  **)
+    echo "Bad command." >&2
+    usage >&2
+    exit 1
+    ;;
+esac
