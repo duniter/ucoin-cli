@@ -9,6 +9,7 @@ cat << EOF
   This script allow to forge HDC documents in accordance with a uCoin server data.
 
   Command:
+    forge-cert  Forge and sign a public key request
     forge-join  Forge and sign a joining membership
     forge-actu  Forge and sign an actualizing membership
     forge-leave Forge and sign a leaving membership
@@ -34,7 +35,7 @@ while getopts :hs:p:u: OPT; do
       PORT="$OPTARG"
       ;;
     u)
-      user="-u $OPTARG"
+      user="$OPTARG"
       ;;
     h)
       usage
@@ -73,8 +74,9 @@ fi
 sign()
 {
   command=$@
+  uuser="-u $user"
   forged=`$command`
-  signed="`$command | unix2dos | gpg -s -a $user --batch | unix2dos`"
+  signed="`$command | unix2dos | gpg -s -a $uuser --batch | unix2dos`"
   echo "$forged" | unix2dos
   echo "$signed" | unix2dos
 }
@@ -87,6 +89,14 @@ case "$cmd" in
   
   peer)
     echo "`$vucoin --peering`"
+    ;;
+
+  forge-cert)
+    if [ -z $user ]; then
+      echo "Requires -u option."
+      exit 1
+    fi
+    sign "gpg -a --export $user"
     ;;
 
   forge-join)
