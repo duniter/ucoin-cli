@@ -94,6 +94,10 @@ module.exports = function(host, port, authenticated, intialized){
 
       votes: {
 
+        get: function (done) {
+          get('/hdc/amendments/votes', done);
+        },
+
         post: function (vote, done) {
           var sigIndex = vote.indexOf("-----BEGIN");
           post('/hdc/amendments/votes', done)

@@ -337,6 +337,20 @@ program
     return;
   }));
 
+program
+  .command('index')
+  .description('List received votes count for each amendment.')
+  .action(connect(function (node) {
+    node.hdc.amendments.votes.get(function (err, res) {
+      _(res.amendments).each(function (ams, number) {
+        _(ams).each(function (count, amHash) {
+          console.log(number + "-" + amHash + ":" + count);
+        });
+      });
+    });
+    return;
+  }));
+
 program.parse(process.argv);
 
 function connect(callback) {

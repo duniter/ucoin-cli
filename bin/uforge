@@ -21,6 +21,7 @@ cat << EOF
     peering       Show peering informations
     upstatus      Send a membership request
     vote          Send a vote request
+    index         List reiceved votes count for each amendment
 
   Options:
     -s  uCoin server to look data in
@@ -149,6 +150,10 @@ case "$cmd" in
   
   current)
     echo "`$vucoin am-current`"
+    ;;
+  
+  index)
+    echo "`$vucoin index`"
     ;;
   
   peering)
