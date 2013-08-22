@@ -9,22 +9,25 @@ cat << EOF
   This script allow to forge HDC documents in accordance with a uCoin server data.
 
   Command:
-    forge-cert  Forge and sign a public key request
-    forge-join  Forge and sign a joining membership
-    forge-actu  Forge and sign an actualizing membership
-    forge-leave Forge and sign a leaving membership
-    current     Show current amendment of the contract
-    contract    List all amendments constituting the contract
-    pkadd       Send a signed key file
-    lookup      Search for a public key
-    peering     Show peering informations
-    upstatus    Send a membership request
-    vote        Send a vote request
+    forge-vote    Forge and sign the next amendment
+    forge-cert    Forge and sign a public key request
+    forge-join    Forge and sign a joining membership
+    forge-actu    Forge and sign an actualizing membership
+    forge-leave   Forge and sign a leaving membership
+    current       Show current amendment of the contract
+    contract      List all amendments constituting the contract
+    pkadd         Send a signed key file
+    lookup        Search for a public key
+    peering       Show peering informations
+    upstatus      Send a membership request
+    vote          Send a vote request
 
   Options:
     -s  uCoin server to look data in
     -p  uCoin server port
     -u  PGP key to use for signature
+    -d  Universal Dividend to apply with forge-vote
+    -m  Minimal coin 10 power to apply with forge-vote
     -h  Help
 
 EOF
@@ -33,7 +36,9 @@ EOF
 SERVER=
 PORT=
 user=
-while getopts :hs:p:u: OPT; do
+dividend=
+mincoin=
+while getopts :hs:p:u:d:m: OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -43,6 +48,12 @@ while getopts :hs:p:u: OPT; do
       ;;
     u)
       user="$OPTARG"
+      ;;
+    d)
+      dividend="$OPTARG"
+      ;;
+    m)
+      mincoin="$OPTARG"
       ;;
     h)
       usage
@@ -85,11 +96,10 @@ sign()
   if [ ! -z $user ]; then
     uuser="-u $user"
   fi
-  echo $command
   forged=`$command`
   # Signature only if no error happened
   if [ $? -eq 0 ]; then
-    signed="`$command | unix2dos | gpg -s -a $uuser --no-tty | unix2dos`"
+    signed="`echo '$forged' | unix2dos | gpg -s -a $uuser --batch | unix2dos`"
     echo "$forged" | unix2dos
     echo "$signed" | unix2dos
   fi
@@ -143,6 +153,17 @@ case "$cmd" in
   
   peering)
     echo "`$vucoin peer`"
+    ;;
+
+  forge-vote)
+    cmd="$vucoin forge-amendment"
+    if [ ! -z $dividend ]; then
+      cmd="$cmd --dividend $dividend"
+    fi
+    if [ ! -z $mincoin ]; then
+      cmd="$cmd --mincoin $mincoin"
+    fi
+    sign "$cmd"
     ;;
 
   forge-cert)

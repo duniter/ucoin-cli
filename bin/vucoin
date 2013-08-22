@@ -4,6 +4,10 @@ var program = require('commander');
 var vucoin  = require('../index');
 var hdc     = require('hdc');
 var fs      = require('fs');
+var sha1    = require('sha1');
+var async   = require('async');
+var _       = require('underscore');
+var merkle  = require('merkle');
 
 // Default values
 program.host = "localhost";
@@ -15,6 +19,8 @@ program
   .option('--search <search>', 'Search string')
   .option('--membership <request>', 'Signed membership request file to send.')
   .option('--votefile <voteFile>', 'Vote file to send.')
+  .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
+  .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
@@ -175,6 +181,159 @@ program
   .description('Forge HDC membership LEAVE request.')
   .action(connect(function (node) {
     forgeMembership('LEAVE', node);
+    return;
+  }));
+
+program
+  .command('forge-amendment')
+  .description('Forge HDC amendment according to uCoin server received data.')
+  .action(connect(function (node) {
+    var forgedAM = new hdc.Amendment();
+    var mapMss = {};
+    var mapSig = {};
+    var previousVoters = [];
+    async.waterfall([
+      function (next){
+        node.hdc.amendments.current(next);
+      },
+      function (am, next){
+        forgedAM.version = 1;
+        forgedAM.currency = am.currency;
+        forgedAM.number = am.number + 1;
+        forgedAM.previousHash = sha1(am.raw).toUpperCase();
+        forgedAM.dividend = program.dividend;
+        forgedAM.coinMinPower = program.mincoin;
+        forgedAM.votersCount = am.votersCount;
+        forgedAM.membersCount = am.membersCount;
+        forgedAM.membersChanges = [];
+        forgedAM.votersChanges = [];
+        next(null);
+      },
+      function (next) {
+        // Previous memberships states
+        node.hdc.amendments.view.memberships(
+          forgedAM.number - 1,
+          forgedAM.previousHash,
+          { extract: true }, next);
+      },
+      function (json, next) {
+        // Map previous memberships states
+        _(json.merkle.leaves).each(function (obj) {
+          mapMss[obj.value.issuer] = obj;
+        });
+        next(null);
+      },
+      function (next) {
+        // Memberships deltas
+        node.hdc.community.memberships({ extract:true }, next);
+      },
+      function (jsonMSS, next) {
+        // Previous memberships states
+        node.hdc.amendments.view.members(
+          forgedAM.number - 1,
+          forgedAM.previousHash,
+          { extract: true }, function (err, jsonMS) {
+            next(err, jsonMSS, jsonMS);
+          });
+      },
+      function (jsonMSS, jsonMS, next) {
+        var newMss = {};
+        var leavingMss = {};
+        // Memberships computing
+        _(jsonMSS.merkle.leaves).each(function (ms) {
+          mapMss[ms.value.issuer] = ms;
+          if(ms.value.request.status == 'JOIN')
+            newMss[ms.value.issuer] = ms;
+          else if(ms.value.request.status == 'LEAVE')
+            leavingMss[ms.value.issuer] = ms;
+          else if(ms.value.request.status == 'ACTUALIZE'){
+          }
+          else
+            console.error("Bad membership status found:", ms.request.status);
+        });
+        // Members
+        var members = [];
+        _(jsonMS.merkle.leaves).each(function (mem) {
+          members.push(mem.value);
+        });
+        var memberships = [];
+        _(mapMss).each(function (obj, hash) {
+          memberships.push(obj.hash);
+        })
+        // Memberships + and - deltas (impacts members too)
+        var plusChanges = [];
+        _(newMss).each(function (obj, hash) {
+          plusChanges.push('+' + hash);
+          if(members.indexOf(hash) == -1){
+            members.push(hash);
+          }
+        });
+        var moinChanges = [];
+        _(leavingMss).each(function (obj, hash) {
+          moinChanges.push('-' + hash);
+          var index = members.indexOf(hash);
+          if(~index){
+            members.splice(index, 0);
+          }
+        });
+        members.sort();
+        memberships.sort();
+        var membersMerkle = merkle(members, 'sha1').process();
+        var membershipsMerkle = merkle(memberships, 'sha1').process();
+        forgedAM.membersChanges = plusChanges.concat(moinChanges);
+        forgedAM.membersCount = membersMerkle.leaves.length;
+        forgedAM.membersRoot = membersMerkle.root();
+        forgedAM.membersStatusRoot = membershipsMerkle.root();
+        next(null);
+      },
+      function (next) {
+        // Previous signatures
+        node.hdc.amendments.view.signatures(
+          forgedAM.number - 1,
+          forgedAM.previousHash,
+          { extract: true }, next);
+      },
+      function (json, next) {
+        _(json.leaves).each(function (obj) {
+          previousVoters.push(obj.issuer);
+        });
+        next(null);
+      },
+      function (next) {
+        // Signatures of current
+        node.hdc.community.votes({ extract:true }, next);
+      },
+      function (json, next) {
+        // Computes + and - deltas
+        var voted = [];
+        var votes = [];
+        _(json.merkle.leaves).each(function (ms) {
+          voted.push(ms.value.issuer);
+          votes.push(ms.hash);
+        });
+        var newVoters = _(voted).difference(previousVoters);
+        var leavingVoters = _(previousVoters).difference(voted);
+        var plusChanges = [];
+        newVoters.forEach(function (hash) {
+          plusChanges.push('+' + hash);
+        });
+        var moinChanges = [];
+        leavingVoters.forEach(function (hash) {
+          moinChanges.push('-' + hash);
+        });
+        votes.sort();
+        voted.sort();
+        var votedMerkle = merkle(voted, 'sha1').process();
+        var votesMerkle = merkle(votes, 'sha1').process();
+        forgedAM.votersChanges = plusChanges.concat(moinChanges);
+        forgedAM.votersCount = votesMerkle.leaves.length;
+        forgedAM.votersSigRoot = votesMerkle.root();
+        forgedAM.votersRoot = votedMerkle.root();
+        next(null);
+      },
+    ], function (err, result) {
+      console.log(forgedAM.getRaw());
+    });
     return;
   }));
 

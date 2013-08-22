@@ -48,6 +48,18 @@ module.exports = function(host, port, authenticated, intialized){
           "request": ms.substring(0, sigIndex),
           "signature": ms.substring(sigIndex)
         });
+      },
+
+      memberships: function (opts, done) {
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? opts : arguments[1];
+        dealMerkle('/hdc/community/memberships', opts, done);
+      },
+
+      votes: function (opts, done) {
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? opts : arguments[1];
+        dealMerkle('/hdc/community/votes', opts, done);
       }
     },
 
@@ -61,6 +73,22 @@ module.exports = function(host, port, authenticated, intialized){
 
         self: function (number, hash, done) {
           get('/hdc/amendments/view/' + number + '-' + hash + '/self', done);
+        },
+
+        members: function (number, hash, opts, done) {
+          amMerkle(arguments, 'members', opts, done);
+        },
+
+        voters: function (number, hash, done) {
+          amMerkle(arguments, 'voters', done);
+        },
+
+        memberships: function (number, hash, done) {
+          amMerkle(arguments, 'memberships', done);
+        },
+
+        signatures: function (number, hash, done) {
+          amMerkle(arguments, 'signatures', done);
         }
       },
 
@@ -76,6 +104,23 @@ module.exports = function(host, port, authenticated, intialized){
         }
       }
     }
+  }
+
+  function amMerkle (args, property) {
+    var number = args[0];
+    var hash = args[1];
+    var opts = args.length == 3 ? {} : args[2];
+    var done = args.length == 3 ? opts : args[3];
+    dealMerkle('/hdc/amendments/view/' + number + '-' + hash + '/' + property, opts, done);
+  }
+
+  function dealMerkle (url, opts, done) {
+    var i = 0;
+    _(opts).each(function (value, key) {
+      url += (i == 0 ? '?' : '&');
+      url += key + '=' + value;
+    });
+    get(url, done);
   }
 
   function server() {
