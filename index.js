@@ -51,8 +51,8 @@ module.exports = function(host, port, authenticated, intialized){
       },
 
       memberships: function (opts, done) {
-        var opts = arguments.length == 1 ? {} : arguments[0];
         var done = arguments.length == 1 ? opts : arguments[1];
+        var opts = arguments.length == 1 ? {} : arguments[0];
         dealMerkle('/hdc/community/memberships', opts, done);
       },
 
