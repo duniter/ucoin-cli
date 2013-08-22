@@ -9,7 +9,7 @@ cat << EOF
   This script allow to forge HDC documents in accordance with a uCoin server data.
 
   Command:
-    forge-vote    Forge and sign the next amendment
+    forge-vote    Forge and sign the current amendment
     forge-cert    Forge and sign a public key request
     forge-join    Forge and sign a joining membership
     forge-actu    Forge and sign an actualizing membership
@@ -29,6 +29,7 @@ cat << EOF
     -u  PGP key to use for signature
     -d  Universal Dividend to apply with forge-vote
     -m  Minimal coin 10 power to apply with forge-vote
+    -n  In conjunction with forge-vote: will forge vote for next amendment
     -h  Help
 
 EOF
@@ -39,7 +40,8 @@ PORT=
 user=
 dividend=
 mincoin=
-while getopts :hs:p:u:d:m: OPT; do
+next=false
+while getopts :hs:p:u:d:m:n OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -55,6 +57,9 @@ while getopts :hs:p:u:d:m: OPT; do
       ;;
     m)
       mincoin="$OPTARG"
+      ;;
+    n)
+      next=true
       ;;
     h)
       usage
@@ -161,12 +166,17 @@ case "$cmd" in
     ;;
 
   forge-vote)
-    cmd="$vucoin forge-amendment"
-    if [ ! -z $dividend ]; then
-      cmd="$cmd --dividend $dividend"
-    fi
-    if [ ! -z $mincoin ]; then
-      cmd="$cmd --mincoin $mincoin"
+    cmd=
+    if $next ; then
+      cmd="$vucoin forge-amendment"
+      if [ ! -z $dividend ]; then
+        cmd="$cmd --dividend $dividend"
+      fi
+      if [ ! -z $mincoin ]; then
+        cmd="$cmd --mincoin $mincoin"
+      fi
+    else
+      cmd="$vucoin am-current"
     fi
     sign "$cmd"
     ;;
