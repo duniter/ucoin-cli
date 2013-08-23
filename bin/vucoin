@@ -39,6 +39,10 @@ program
       sign = key.substr(key.indexOf('-----BEGIN PGP SIGNATURE-----'));
       key = key.substr(0, key.indexOf('-----BEGIN PGP SIGNATURE-----'));
     }
+    if(~key.indexOf('-----BEGIN PGP MESSAGE-----')){
+      sign = key.substr(key.indexOf('-----BEGIN PGP MESSAGE-----'));
+      key = key.substr(0, key.indexOf('-----BEGIN PGP MESSAGE-----'));
+    }
     else if(program.signature){
       signature = fs.readFileSync(signature, 'utf8');
     }
@@ -341,13 +345,13 @@ program
   .command('index')
   .description('List received votes count for each amendment.')
   .action(connect(function (node) {
-    node.hdc.amendments.votes.get(function (err, res) {
+    node.hdc.amendments.votes.get(proxy(function (res) {
       _(res.amendments).each(function (ams, number) {
         _(ams).each(function (count, amHash) {
           console.log(number + "-" + amHash + ":" + count);
         });
       });
-    });
+    }));
     return;
   }));
 
