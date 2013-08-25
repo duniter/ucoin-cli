@@ -13,11 +13,11 @@ cat << EOF
     Top level:
 
       current             Show current amendment of the contract
-      vote                Send a vote request
       contract            List all amendments constituting the contract
       lookup              Search for a public key
       peering             Show peering informations
       index               List reiceved votes count for each amendment
+      vote-current        Send a vote according for current amendment of a uCoin server.
       send-pubkey [file]  Send signed public key [file] to a uCoin server.
       send-join [file]    Send join request [file] to a uCoin server.
       send-actu [file]    Send actu request [file] to a uCoin server.
@@ -35,6 +35,7 @@ cat << EOF
     forge-actu    Forge and sign an actualizing membership
     forge-leave   Forge and sign a leaving membership
     upstatus      Send a membership request
+    vote          Send a vote request
 
   Options:
     -s  uCoin server to look data in
@@ -99,13 +100,16 @@ cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cwd="`pwd`/$cwd"
 cmd="$1"
 ucoin="$cwd/ucoin"
+ucoinsh="$0"
 
 if [ ! -z $SERVER ]; then
   ucoin="$ucoin -h $SERVER"
+  ucoinsh="$ucoin -h $SERVER"
 fi
 
 if [ ! -z $PORT ]; then
   ucoin="$ucoin -p $PORT"
+  ucoinsh="$ucoin -p $PORT"
 fi
 
 sign()
@@ -167,6 +171,13 @@ case "$cmd" in
     echo "`$ucoin vote --votefile $2`"
     ;;
   
+  vote-current)
+    current=`$ucoinsh forge-vote`
+    echo "$current" > current.ucoin.tmp
+    echo "`$ucoinsh vote current.ucoin.tmp`"
+    rm current.ucoin.tmp
+    ;;
+  
   send-pubkey)
     pubkey=`fromFileOrForge forge-cert $2`
     echo "$pubkey" > pubkey.ucoin.tmp
@@ -177,7 +188,7 @@ case "$cmd" in
   send-join)
     join=`fromFileOrForge forge-join $2`
     echo "$join" > join.ucoin.tmp
-    echo "`$ucoin join --membership join.ucoin.tmp`"
+    echo "`$0 $PORTjoin --membership join.ucoin.tmp`"
     rm join.ucoin.tmp
     ;;
   
