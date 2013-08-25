@@ -95,14 +95,14 @@ fi
 cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cwd="`pwd`/$cwd"
 cmd="$1"
-vucoin="$cwd/ucoin"
+ucoin="$cwd/ucoin"
 
 if [ ! -z $SERVER ]; then
-  vucoin="$vucoin -h $SERVER"
+  ucoin="$ucoin -h $SERVER"
 fi
 
 if [ ! -z $PORT ]; then
-  vucoin="$vucoin -p $PORT"
+  ucoin="$ucoin -p $PORT"
 fi
 
 sign()
@@ -121,6 +121,29 @@ sign()
   fi
 }
 
+fromFileOrForge()
+{
+  var=""
+  if [ ! -z $user ]; then
+    # Read from selfcall
+    var=`$0 -u $user $1`
+  elif [ -z $2 ]; then
+    # Read from STDIN
+    var=`cat`
+  elif [ ! -e $2 ] || [ ! -r $2 ]; then
+    # Read from file
+    if [ ! -e $2 ];then
+      echo "File does not exist" >&2;
+    elif [ ! -r $2 ];then
+      echo "File must be readable" >&2;
+    fi
+    exit 1
+  else
+    var=`cat $2`
+  fi
+  echo "$var"
+}
+
 case "$cmd" in
   
   upstatus)
@@ -129,7 +152,7 @@ case "$cmd" in
       echo "Parameter must be a readable file" >&2
       exit 1
     fi
-    echo "`$vucoin join --membership $2`"
+    echo "`$ucoin join --membership $2`"
     ;;
   
   vote)
@@ -138,54 +161,20 @@ case "$cmd" in
       echo "Parameter must be a readable file" >&2
       exit 1
     fi
-    echo "`$vucoin vote --votefile $2`"
+    echo "`$ucoin vote --votefile $2`"
     ;;
   
   send-pubkey)
-    pubkey=""
-    if [ ! -z $user ]; then
-      # Read from selfcall
-      pubkey=`$0 -u $user forge-cert`
-    elif [ -z $2 ]; then
-      # Read from STDIN
-      pubkey=`cat`
-    elif [ ! -e $2 ] || [ ! -r $2 ]; then
-      # Read from file
-      if [ ! -e $2 ];then
-        echo "File does not exist" >&2;
-      elif [ ! -r $2 ];then
-        echo "File must be readable" >&2;
-      fi
-      exit 1
-    else
-      pubkey=`cat $2`
-    fi
+    pubkey=`fromFileOrForge forge-cert $2`
     echo "$pubkey" > pubkey.ucoin.tmp
-    echo "`$vucoin pks-add --key pubkey.ucoin.tmp`"
+    echo "`$ucoin pks-add --key pubkey.ucoin.tmp`"
     rm pubkey.ucoin.tmp
     ;;
   
   send-join)
-    join=""
-    if [ ! -z $user ]; then
-      # Read from selfcall
-      join=`$0 -u $user forge-join`
-    elif [ -z $2 ]; then
-      # Read from STDIN
-      join=`cat`
-    elif [ ! -e $2 ] || [ ! -r $2 ]; then
-      # Read from file
-      if [ ! -e $2 ];then
-        echo "File does not exist" >&2;
-      elif [ ! -r $2 ];then
-        echo "File must be readable" >&2;
-      fi
-      exit 1
-    else
-      join=`cat $2`
-    fi
+    join=`fromFileOrForge forge-join $2`
     echo "$join" > join.ucoin.tmp
-    echo "`$vucoin join --membership join.ucoin.tmp`"
+    echo "`$ucoin join --membership join.ucoin.tmp`"
     rm join.ucoin.tmp
     ;;
   
@@ -195,29 +184,29 @@ case "$cmd" in
       echo "Need a search parameter" >&2
       exit 1
     fi
-    echo "`$vucoin pks-lookup --search $2`"
+    echo "`$ucoin pks-lookup --search $2`"
     ;;
   
   contract)
-    echo "`$vucoin am-contract`"
+    echo "`$ucoin am-contract`"
     ;;
   
   current)
-    echo "`$vucoin am-current`"
+    echo "`$ucoin am-current`"
     ;;
   
   index)
-    echo "`$vucoin index`"
+    echo "`$ucoin index`"
     ;;
   
   peering)
-    echo "`$vucoin peer`"
+    echo "`$ucoin peer`"
     ;;
 
   forge-vote)
     cmd=
     if $next ; then
-      cmd="$vucoin forge-amendment"
+      cmd="$ucoin forge-amendment"
       if [ ! -z $dividend ]; then
         cmd="$cmd --dividend $dividend"
       fi
@@ -225,7 +214,7 @@ case "$cmd" in
         cmd="$cmd --mincoin $mincoin"
       fi
     else
-      cmd="$vucoin am-current"
+      cmd="$ucoin am-current"
     fi
     sign "$cmd"
     ;;
@@ -239,15 +228,15 @@ case "$cmd" in
     ;;
 
   forge-join)
-    sign "$vucoin forge-join"
+    sign "$ucoin forge-join"
     ;;
 
   forge-actu)
-    sign "$vucoin forge-actu"
+    sign "$ucoin forge-actu"
     ;;
 
   forge-leave)
-    sign "$vucoin forge-leave"
+    sign "$ucoin forge-leave"
     ;;
 
   **)
