@@ -379,7 +379,7 @@ function forgeMembership (type, node) {
       var ms = new hdc.Membership();
       ms.version = "1";
       ms.currency = peering.currency;
-      ms.basis = am.number;
+      ms.basis = am.number + 1;
       ms.status = type;
       console.log(ms.getRaw());
     }));
