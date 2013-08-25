@@ -186,10 +186,10 @@ case "$cmd" in
     if [[ ! -z $user ]]; then
       user="-u $user"
     fi
-    current=`$ucoinsh$ user -n forge-vote`
-    echo "$current" > current.ucoin.tmp
-    echo "`$ucoinsh vote current.ucoin.tmp`"
-    rm current.ucoin.tmp
+    next=`$ucoinsh $user -n forge-vote`
+    echo "$next" > next.ucoin.tmp
+    echo "`$ucoinsh vote next.ucoin.tmp`"
+    rm next.ucoin.tmp
     ;;
   
   send-pubkey)
