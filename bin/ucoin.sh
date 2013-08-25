@@ -23,9 +23,15 @@ cat << EOF
     vote          Send a vote request
     index         List reiceved votes count for each amendment
 
-    send-pubkey [file]  Send a public key to a uCoin server. The file must contain the public key in ASCII armor format,
-                        followed by a signature of it in ASCII armored format too. This file may be obtained with 
-                        'forge-cert' command. If [file] is not provided, it is read from STDIN.
+    send-pubkey [file]  Send signed public key [file] to a uCoin server.
+                        If -u option is provided, [file] is ommited.
+                        If [file] is not provided, it is read from STDIN.
+                        Note: [file] may be forged using 'forge-cert' command.
+    
+    send-join [file]    Send join request [file] to a uCoin server.
+                        If -u option is provided, [file] is ommited.
+                        If [file] is not provided, it is read from STDIN.
+                        Note: [file] may be forged using 'forge-join' command.
 
   Options:
     -s  uCoin server to look data in
@@ -157,6 +163,30 @@ case "$cmd" in
     echo "$pubkey" > pubkey.ucoin.tmp
     echo "`$vucoin pks-add --key pubkey.ucoin.tmp`"
     rm pubkey.ucoin.tmp
+    ;;
+  
+  send-join)
+    join=""
+    if [ ! -z $user ]; then
+      # Read from selfcall
+      join=`$0 -u $user forge-join`
+    elif [ -z $2 ]; then
+      # Read from STDIN
+      join=`cat`
+    elif [ ! -e $2 ] || [ ! -r $2 ]; then
+      # Read from file
+      if [ ! -e $2 ];then
+        echo "File does not exist" >&2;
+      elif [ ! -r $2 ];then
+        echo "File must be readable" >&2;
+      fi
+      exit 1
+    else
+      join=`cat $2`
+    fi
+    echo "$join" > join.ucoin.tmp
+    echo "`$vucoin join --membership join.ucoin.tmp`"
+    rm join.ucoin.tmp
     ;;
   
   lookup)
