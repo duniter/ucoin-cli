@@ -10,38 +10,31 @@ cat << EOF
 
   Commands:
 
+    Top level:
+
+      current             Show current amendment of the contract
+      vote                Send a vote request
+      contract            List all amendments constituting the contract
+      lookup              Search for a public key
+      peering             Show peering informations
+      index               List reiceved votes count for each amendment
+      send-pubkey [file]  Send signed public key [file] to a uCoin server.
+      send-join [file]    Send join request [file] to a uCoin server.
+      send-actu [file]    Send actu request [file] to a uCoin server.
+      send-leave [file]   Send leave request [file] to a uCoin server.
+
+                          If -u option is provided, [file] is ommited.
+                          If [file] is not provided, it is read from STDIN.
+                          Note: [file] may be forged using 'forge-*' commands.
+
+    Lower level:
+
     forge-vote    Forge and sign the current amendment
     forge-cert    Forge and sign a public key request
     forge-join    Forge and sign a joining membership
     forge-actu    Forge and sign an actualizing membership
     forge-leave   Forge and sign a leaving membership
-    current       Show current amendment of the contract
-    contract      List all amendments constituting the contract
-    lookup        Search for a public key
-    peering       Show peering informations
     upstatus      Send a membership request
-    vote          Send a vote request
-    index         List reiceved votes count for each amendment
-
-    send-pubkey [file]  Send signed public key [file] to a uCoin server.
-                        If -u option is provided, [file] is ommited.
-                        If [file] is not provided, it is read from STDIN.
-                        Note: [file] may be forged using 'forge-cert' command.
-    
-    send-join [file]    Send join request [file] to a uCoin server.
-                        If -u option is provided, [file] is ommited.
-                        If [file] is not provided, it is read from STDIN.
-                        Note: [file] may be forged using 'forge-join' command.
-    
-    send-actu [file]    Send actu request [file] to a uCoin server.
-                        If -u option is provided, [file] is ommited.
-                        If [file] is not provided, it is read from STDIN.
-                        Note: [file] may be forged using 'forge-actu' command.
-    
-    send-leave [file]   Send leave request [file] to a uCoin server.
-                        If -u option is provided, [file] is ommited.
-                        If [file] is not provided, it is read from STDIN.
-                        Note: [file] may be forged using 'forge-leave' command.
 
   Options:
     -s  uCoin server to look data in
