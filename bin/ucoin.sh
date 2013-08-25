@@ -32,6 +32,16 @@ cat << EOF
                         If -u option is provided, [file] is ommited.
                         If [file] is not provided, it is read from STDIN.
                         Note: [file] may be forged using 'forge-join' command.
+    
+    send-actu [file]    Send actu request [file] to a uCoin server.
+                        If -u option is provided, [file] is ommited.
+                        If [file] is not provided, it is read from STDIN.
+                        Note: [file] may be forged using 'forge-actu' command.
+    
+    send-leave [file]   Send leave request [file] to a uCoin server.
+                        If -u option is provided, [file] is ommited.
+                        If [file] is not provided, it is read from STDIN.
+                        Note: [file] may be forged using 'forge-leave' command.
 
   Options:
     -s  uCoin server to look data in
@@ -173,6 +183,20 @@ case "$cmd" in
   
   send-join)
     join=`fromFileOrForge forge-join $2`
+    echo "$join" > join.ucoin.tmp
+    echo "`$ucoin join --membership join.ucoin.tmp`"
+    rm join.ucoin.tmp
+    ;;
+  
+  send-actu)
+    join=`fromFileOrForge forge-actu $2`
+    echo "$join" > join.ucoin.tmp
+    echo "`$ucoin join --membership join.ucoin.tmp`"
+    rm join.ucoin.tmp
+    ;;
+  
+  send-leave)
+    join=`fromFileOrForge forge-leave $2`
     echo "$join" > join.ucoin.tmp
     echo "`$ucoin join --membership join.ucoin.tmp`"
     rm join.ucoin.tmp
