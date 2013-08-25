@@ -173,14 +173,20 @@ case "$cmd" in
     ;;
   
   vote-current)
-    current=`$ucoinsh forge-vote`
+    if [[ ! -z $user ]]; then
+      user="-u $user"
+    fi
+    current=`$ucoinsh $user forge-vote`
     echo "$current" > current.ucoin.tmp
     echo "`$ucoinsh vote current.ucoin.tmp`"
     rm current.ucoin.tmp
     ;;
   
   vote-next)
-    current=`$ucoinsh -n forge-vote`
+    if [[ ! -z $user ]]; then
+      user="-u $user"
+    fi
+    current=`$ucoinsh$ user -n forge-vote`
     echo "$current" > current.ucoin.tmp
     echo "`$ucoinsh vote current.ucoin.tmp`"
     rm current.ucoin.tmp
@@ -196,7 +202,7 @@ case "$cmd" in
   send-join)
     join=`fromFileOrForge forge-join $2`
     echo "$join" > join.ucoin.tmp
-    echo "`$0 $PORTjoin --membership join.ucoin.tmp`"
+    echo "`$ucoin join --membership join.ucoin.tmp`"
     rm join.ucoin.tmp
     ;;
   
