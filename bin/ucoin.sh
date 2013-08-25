@@ -8,7 +8,8 @@ cat << EOF
 
   This script allow to forge HDC documents in accordance with a uCoin server data.
 
-  Command:
+  Commands:
+
     forge-vote    Forge and sign the current amendment
     forge-cert    Forge and sign a public key request
     forge-join    Forge and sign a joining membership
@@ -16,12 +17,15 @@ cat << EOF
     forge-leave   Forge and sign a leaving membership
     current       Show current amendment of the contract
     contract      List all amendments constituting the contract
-    pkadd         Send a signed key file
     lookup        Search for a public key
     peering       Show peering informations
     upstatus      Send a membership request
     vote          Send a vote request
     index         List reiceved votes count for each amendment
+
+    send-pubkey [file]  Send a public key to a uCoin server. The file must contain the public key in ASCII armor format,
+                        followed by a signature of it in ASCII armored format too. This file may be obtained with 
+                        'forge-cert' command. If [file] is not provided, it is read from STDIN.
 
   Options:
     -s  uCoin server to look data in
@@ -85,7 +89,7 @@ fi
 cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cwd="`pwd`/$cwd"
 cmd="$1"
-vucoin="$cwd/vucoin"
+vucoin="$cwd/ucoin"
 
 if [ ! -z $SERVER ]; then
   vucoin="$vucoin -h $SERVER"
@@ -131,13 +135,28 @@ case "$cmd" in
     echo "`$vucoin vote --votefile $2`"
     ;;
   
-  pkadd)
-    # Must have a readable file parameter
-    if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
-      echo "Parameter must be a readable file" >&2
+  send-pubkey)
+    pubkey=""
+    if [ ! -z $user ]; then
+      # Read from selfcall
+      pubkey=`$0 -u $user forge-cert`
+    elif [ -z $2 ]; then
+      # Read from STDIN
+      pubkey=`cat`
+    elif [ ! -e $2 ] || [ ! -r $2 ]; then
+      # Read from file
+      if [ ! -e $2 ];then
+        echo "File does not exist" >&2;
+      elif [ ! -r $2 ];then
+        echo "File must be readable" >&2;
+      fi
       exit 1
+    else
+      pubkey=`cat $2`
     fi
-    echo "`$vucoin pks-add --key $2`"
+    echo "$pubkey" > pubkey.ucoin.tmp
+    echo "`$vucoin pks-add --key pubkey.ucoin.tmp`"
+    rm pubkey.ucoin.tmp
     ;;
   
   lookup)
