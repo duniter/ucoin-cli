@@ -298,8 +298,8 @@ program
           { extract: true }, next);
       },
       function (json, next) {
-        _(json.leaves).each(function (obj) {
-          previousVoters.push(obj.issuer);
+        _(json.merkle.leaves).each(function (obj) {
+          previousVoters.push(obj.value.issuer);
         });
         next(null);
       },
