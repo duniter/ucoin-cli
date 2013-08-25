@@ -223,7 +223,8 @@ program
       function (json, next) {
         // Map previous memberships states
         _(json.merkle.leaves).each(function (obj) {
-          mapMss[obj.value.issuer] = obj;
+          if(obj.value.request.status != 'LEAVE')
+            mapMss[obj.value.issuer] = obj;
         });
         next(null);
       },
