@@ -18,6 +18,7 @@ cat << EOF
       peering             Show peering informations
       index               List reiceved votes count for each amendment
       vote-current        Send a vote according for current amendment of a uCoin server.
+      vote-next           Send a vote for next amendment according to a uCoin server\'s state.
       send-pubkey [file]  Send signed public key [file] to a uCoin server.
       send-join [file]    Send join request [file] to a uCoin server.
       send-actu [file]    Send actu request [file] to a uCoin server.
@@ -173,6 +174,13 @@ case "$cmd" in
   
   vote-current)
     current=`$ucoinsh forge-vote`
+    echo "$current" > current.ucoin.tmp
+    echo "`$ucoinsh vote current.ucoin.tmp`"
+    rm current.ucoin.tmp
+    ;;
+  
+  vote-next)
+    current=`$ucoinsh -n forge-vote`
     echo "$current" > current.ucoin.tmp
     echo "`$ucoinsh vote current.ucoin.tmp`"
     rm current.ucoin.tmp
