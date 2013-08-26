@@ -30,13 +30,14 @@ cat << EOF
 
     Lower level:
 
-    forge-vote    Forge and sign the current amendment
-    forge-cert    Forge and sign a public key request
-    forge-join    Forge and sign a joining membership
-    forge-actu    Forge and sign an actualizing membership
-    forge-leave   Forge and sign a leaving membership
-    upstatus      Send a membership request
-    vote          Send a vote request
+    forge-amendment Forge and sign the next amendment
+    forge-vote      Forge and sign the current amendment
+    forge-cert      Forge and sign a public key request
+    forge-join      Forge and sign a joining membership
+    forge-actu      Forge and sign an actualizing membership
+    forge-leave     Forge and sign a leaving membership
+    upstatus        Send a membership request
+    vote            Send a vote request
 
   Options:
     -s  uCoin server to look data in
@@ -287,6 +288,10 @@ case "$cmd" in
 
   forge-leave)
     sign "$ucoin forge-leave"
+    ;;
+
+  forge-amendment)
+    sign "$ucoin forge-amendment"
     ;;
 
   **)

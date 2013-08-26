@@ -198,27 +198,52 @@ program
     var previousVoters = [];
     async.waterfall([
       function (next){
-        node.hdc.amendments.current(next);
+        node.hdc.amendments.current(function (err, am) {
+          if(!am){
+            // If no amendment, then default
+            async.waterfall([
+              function (cb){
+                node.ucg.peering(cb);
+              }
+            ], function (err, result) {
+              next(err, {
+                currency: result.currency,
+                number: -1,
+                votersCount: 0,
+                membersCount: 0
+              });
+            });
+            return;
+          }
+          next(err, am);
+        });
       },
       function (am, next){
         forgedAM.version = 1;
         forgedAM.currency = am.currency;
         forgedAM.number = am.number + 1;
-        forgedAM.previousHash = sha1(am.raw).toUpperCase();
         forgedAM.dividend = program.dividend;
         forgedAM.coinMinPower = program.mincoin;
         forgedAM.votersCount = am.votersCount;
         forgedAM.membersCount = am.membersCount;
         forgedAM.membersChanges = [];
         forgedAM.votersChanges = [];
+        if(am.raw){
+          forgedAM.previousHash = sha1(am.raw).toUpperCase();
+        }
         next(null);
       },
       function (next) {
         // Previous memberships states
-        node.hdc.amendments.view.memberships(
-          forgedAM.number - 1,
-          forgedAM.previousHash,
-          { extract: true }, next);
+        if(forgedAM.previousHash){
+          node.hdc.amendments.view.memberships(
+            forgedAM.number - 1,
+            forgedAM.previousHash,
+            { extract: true }, next);
+        }
+        else{
+          next(null, { merkle: { leaves: [] }});
+        }
       },
       function (json, next) {
         // Map previous memberships states
@@ -233,13 +258,18 @@ program
         node.hdc.community.memberships({ extract:true }, next);
       },
       function (jsonMSS, next) {
-        // Previous memberships states
-        node.hdc.amendments.view.members(
-          forgedAM.number - 1,
-          forgedAM.previousHash,
-          { extract: true }, function (err, jsonMS) {
-            next(err, jsonMSS, jsonMS);
-          });
+        if(forgedAM.previousHash){
+          // Previous memberships states
+          node.hdc.amendments.view.members(
+            forgedAM.number - 1,
+            forgedAM.previousHash,
+            { extract: true }, function (err, jsonMS) {
+              next(err, jsonMSS, jsonMS);
+            });
+        }
+        else{
+          next(null, jsonMSS, { merkle: { leaves: [] }});
+        }
       },
       function (jsonMSS, jsonMS, next) {
         var newMss = {};
