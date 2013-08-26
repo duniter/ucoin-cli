@@ -375,15 +375,18 @@ function connect(callback) {
 
 function forgeMembership (type, node) {
   node.ucg.peering(proxy(function (peering) {
-    node.hdc.amendments.current(proxy(function (am) {
-      var amendment = new hdc.Amendment(am.raw);
+    node.hdc.amendments.current(function (err, am) {
+      var number = 0;
+      if(am){
+        number = am.number + 1;
+      }
       var ms = new hdc.Membership();
       ms.version = "1";
       ms.currency = peering.currency;
-      ms.basis = am.number + 1;
+      ms.basis = number;
       ms.status = type;
       console.log(ms.getRaw());
-    }));
+    });
   }));
 }
 
