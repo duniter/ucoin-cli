@@ -98,7 +98,6 @@ if [ $# -eq 0 ]; then
 fi
 
 cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
-cwd="`pwd`/$cwd"
 cmd="$1"
 ucoin="$cwd/ucoin"
 ucoinsh="$0"
