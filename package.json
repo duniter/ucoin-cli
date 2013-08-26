@@ -7,7 +7,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "mocha test/*.js"
+    "test": "mocha test/*.js",
+    "postinstall": "./postinstall.sh",
+    "postuninstall": "./postuninstall.sh"
   },
   "repository": {
     "type": "git",
@@ -40,6 +42,6 @@
     "supertest": ""
   },
   "bin": {
-    "vucoin": "./bin/vucoin"
+    "ucoin": "./bin/ucoin.sh"
   }
 }

@@ -97,10 +97,19 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-cwd=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
+executable=$0
+if [ -L $LINK ]; then
+  # Production link
+  executable=`readlink $executable`
+  if [[ "$executable" != /* ]]; then
+    wdir=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
+    executable=$wdir/$executable
+  fi
+fi
+cwd=`echo $executable | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cmd="$1"
 ucoin="$cwd/ucoin"
-ucoinsh="$0"
+ucoinsh="$executable"
 
 if [ ! -z $SERVER ]; then
   ucoin="$ucoin -h $SERVER"
