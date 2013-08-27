@@ -52,6 +52,7 @@ cat << EOF
     -d  Universal Dividend to apply with forge-vote
     -m  Minimal coin 10 power to apply with forge-vote
     -n  In conjunction with forge-vote: will forge vote for next amendment
+    -v  IVerbose mode
     -h  Help
 
 EOF
@@ -63,7 +64,8 @@ user=
 dividend=
 mincoin=
 next=false
-while getopts :hs:p:u:d:m:n OPT; do
+verbose=false
+while getopts :hs:p:u:d:m:nv OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -82,6 +84,9 @@ while getopts :hs:p:u:d:m:n OPT; do
       ;;
     n)
       next=true
+      ;;
+    v)
+      verbose=true
       ;;
     h)
       usage
@@ -131,6 +136,10 @@ if [ ! -z $PORT ]; then
   ucoinsh="$ucoinsh -p $PORT"
 fi
 
+if $verbose; then
+  ucoinsh="$ucoinsh -v"
+fi
+
 sign()
 {
   # If signature requires user
@@ -141,6 +150,9 @@ sign()
   forged=`$command`
   if [[ ! -z $2 ]] && ! echo "$forged" | grep "$2" > /dev/null; then
     echo "Does not match '$2'" >&2
+    if $verbose; then
+      echo "$forged" >&2
+    fi
     exit 1
   fi
   # Signature only if no error happened
