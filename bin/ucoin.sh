@@ -102,10 +102,10 @@ executable=$0
 if [ -L $LINK ]; then
   # Production link
   executable=`readlink $executable`
-  if [[ "$executable" != /* ]]; then
-    wdir=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
-    executable=$wdir/$executable
-  fi
+fi
+if [[ "$executable" != /* ]]; then
+  wdir=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
+  executable=$wdir/${executable}ucoin.sh
 fi
 cwd=`echo $executable | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cmd="$1"
@@ -114,12 +114,12 @@ ucoinsh="$executable"
 
 if [ ! -z $SERVER ]; then
   ucoin="$ucoin -h $SERVER"
-  ucoinsh="$ucoin -h $SERVER"
+  ucoinsh="$ucoinsh -s $SERVER"
 fi
 
 if [ ! -z $PORT ]; then
   ucoin="$ucoin -p $PORT"
-  ucoinsh="$ucoin -p $PORT"
+  ucoinsh="$ucoinsh -p $PORT"
 fi
 
 sign()
