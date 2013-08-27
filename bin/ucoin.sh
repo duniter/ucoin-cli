@@ -132,7 +132,7 @@ sign()
   forged=`$command`
   # Signature only if no error happened
   if [ $? -eq 0 ]; then
-    signed="`echo '$forged' | unix2dos | gpg -s -a $uuser --batch | unix2dos`"
+    signed="`echo '$forged' | unix2dos | gpg -s -a $uuser | unix2dos`"
     echo "$forged" | unix2dos
     echo "$signed" | unix2dos
   fi
