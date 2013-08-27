@@ -143,7 +143,7 @@ fromFileOrForge()
   var=""
   if [ ! -z $user ]; then
     # Read from selfcall
-    var=`$0 -u $user $1`
+    var=`$ucoinsh -u $user $1`
   elif [ -z $2 ]; then
     # Read from STDIN
     var=`cat`
