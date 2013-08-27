@@ -17,8 +17,14 @@ cat << EOF
       lookup              Search for a public key
       peering             Show peering informations
       index               List reiceved votes count for each amendment
-      vote-current        Send a vote according for current amendment of a uCoin server.
-      vote-next           Send a vote for next amendment according to a uCoin server\'s state.
+
+      vote-current [num]  Send a vote according for current amendment of a uCoin server.
+      vote-next [num]     Send a vote for next amendment according to a uCoin server\'s state.
+
+                          If [num] is provided, check the vote actually is about amendment
+                          number [num] before signing and sending it (as server\'s contract
+                          may have evolved between during process).
+
       send-pubkey [file]  Send signed public key [file] to a uCoin server.
       send-join [file]    Send join request [file] to a uCoin server.
       send-actu [file]    Send actu request [file] to a uCoin server.
@@ -128,11 +134,15 @@ fi
 sign()
 {
   # If signature requires user
-  command=$@
+  command=$1
   if [ ! -z $user ]; then
     uuser="-u $user"
   fi
   forged=`$command`
+  if [[ ! -z $2 ]] && ! echo "$forged" | grep "$2" > /dev/null; then
+    echo "Does not match '$2'" >&2
+    exit 1
+  fi
   # Signature only if no error happened
   if [ $? -eq 0 ]; then
     signed="`echo '$forged' | unix2dos | gpg -s -a $uuser | unix2dos`"
@@ -188,20 +198,24 @@ case "$cmd" in
     if [[ ! -z $user ]]; then
       user="-u $user"
     fi
-    current=`$ucoinsh $user forge-vote`
-    echo "$current" > current.ucoin.tmp
-    echo "`$ucoinsh vote current.ucoin.tmp`"
-    rm current.ucoin.tmp
+    current=`$ucoinsh $user forge-vote $2`
+    if echo $current | grep "Does not match" > /dev/null ; then
+      echo "$current" > current.ucoin.tmp
+      echo "`$ucoinsh vote current.ucoin.tmp`"
+      rm current.ucoin.tmp
+    fi
     ;;
   
   vote-next)
     if [[ ! -z $user ]]; then
       user="-u $user"
     fi
-    next=`$ucoinsh $user -n forge-vote`
-    echo "$next" > next.ucoin.tmp
-    echo "`$ucoinsh vote next.ucoin.tmp`"
-    rm next.ucoin.tmp
+    next=`$ucoinsh $user -n forge-vote $2`
+    if echo $current | grep "Does not match" > /dev/null ; then
+      echo "$next" > next.ucoin.tmp
+      echo "`$ucoinsh vote next.ucoin.tmp`"
+      rm next.ucoin.tmp
+    fi
     ;;
   
   send-pubkey)
@@ -270,7 +284,7 @@ case "$cmd" in
     else
       cmd="$ucoin am-current"
     fi
-    sign "$cmd"
+    sign "$cmd" "Number: $2"
     ;;
 
   forge-cert)
