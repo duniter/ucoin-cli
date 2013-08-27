@@ -105,7 +105,10 @@ if [ -L $LINK ]; then
 fi
 if [[ "$executable" != /* ]]; then
   wdir=`echo $0 | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
-  executable=$wdir/${executable}ucoin.sh
+  executable=$wdir/${executable}
+  if [[ $executable != *ucoin.sh ]]; then
+    executable=${executable}/ucoin.sh
+  fi
 fi
 cwd=`echo $executable | sed -e "s/\(.*\)\/\([^\/]*\)/\1/g"`
 cmd="$1"
