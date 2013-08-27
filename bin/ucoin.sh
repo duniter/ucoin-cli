@@ -138,6 +138,9 @@ fi
 
 if $verbose; then
   ucoinsh="$ucoinsh -v"
+  echo "Called: $0 $@"
+  echo "ucoin: $ucoin"
+  echo "ucoinsh: $ucoinsh"
 fi
 
 sign()
@@ -211,7 +214,7 @@ case "$cmd" in
       user="-u $user"
     fi
     current=`$ucoinsh $user forge-vote $2`
-    if echo $current | grep "Does not match" > /dev/null ; then
+    if ! echo "$current" | grep "Does not match" > /dev/null ; then
       echo "$current" > current.ucoin.tmp
       echo "`$ucoinsh vote current.ucoin.tmp`"
       rm current.ucoin.tmp
@@ -223,7 +226,7 @@ case "$cmd" in
       user="-u $user"
     fi
     next=`$ucoinsh $user -n forge-vote $2`
-    if echo $current | grep "Does not match" > /dev/null ; then
+    if ! echo "$current" | grep "Does not match" > /dev/null ; then
       echo "$next" > next.ucoin.tmp
       echo "`$ucoinsh vote next.ucoin.tmp`"
       rm next.ucoin.tmp
