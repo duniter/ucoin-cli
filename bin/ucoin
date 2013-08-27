@@ -276,15 +276,17 @@ program
         var leavingMss = {};
         // Memberships computing
         _(jsonMSS.merkle.leaves).each(function (ms) {
-          mapMss[ms.value.issuer] = ms;
-          if(ms.value.request.status == 'JOIN')
-            newMss[ms.value.issuer] = ms;
-          else if(ms.value.request.status == 'LEAVE')
-            leavingMss[ms.value.issuer] = ms;
-          else if(ms.value.request.status == 'ACTUALIZE'){
+          if(ms.value.request.basis == forgedAM.number){
+            mapMss[ms.value.issuer] = ms;
+            if(ms.value.request.status == 'JOIN')
+              newMss[ms.value.issuer] = ms;
+            else if(ms.value.request.status == 'LEAVE')
+              leavingMss[ms.value.issuer] = ms;
+            else if(ms.value.request.status == 'ACTUALIZE'){
+            }
+            else
+              console.error("Bad membership status found:", ms.request.status);
           }
-          else
-            console.error("Bad membership status found:", ms.request.status);
         });
         // Members
         var members = [];
