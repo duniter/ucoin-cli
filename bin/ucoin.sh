@@ -136,6 +136,14 @@ if [ ! -z $PORT ]; then
   ucoinsh="$ucoinsh -p $PORT"
 fi
 
+if [ ! -z $dividend ]; then
+  ucoinsh="$ucoinsh -d $dividend"
+fi
+
+if [ ! -z $mincoin ]; then
+  ucoinsh="$ucoinsh -m $mincoin"
+fi
+
 if $verbose; then
   ucoinsh="$ucoinsh -v"
   echo "Called: $0 $@"
