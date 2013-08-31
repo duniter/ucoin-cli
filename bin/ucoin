@@ -247,9 +247,11 @@ program
         node.hdc.transactions.sender.issuance.get(tx.sender, { extract: true, start: json.merkle.leavesCount - 1 }, next);
       },
       function (json, next){
-        var tmpTX = new hdc.Transaction(json.merkle.leaves[0].value.raw);
-        var coins = tmpTX.getCoins();
-        newCoinsStart = coins[coins.length-1].number + 1;
+        if(_(json.merkle.leaves).size() > 0){
+          var tmpTX = new hdc.Transaction(json.merkle.leaves[0].value.raw);
+          var coins = tmpTX.getCoins();
+          newCoinsStart = coins[coins.length-1].number + 1;
+        }
         // Find already issued from the amendment
         node.hdc.transactions.sender.issuance.dividend.amendment(tx.sender, amNumber, { extract: true }, next);
       },
