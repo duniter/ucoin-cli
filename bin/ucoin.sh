@@ -44,6 +44,7 @@ cat << EOF
     forge-actu      Forge and sign an actualizing membership
     forge-leave     Forge and sign a leaving membership
     forge-issuance  Forge and sign an issuance transaction
+    forge-transfert Forge and sign a transfert transaction
     upstatus        Send a membership request
     vote            Send a vote request
 
@@ -342,6 +343,25 @@ case "$cmd" in
       comment="$5"
     fi
     sign "$ucoin forge-issuance $2 $3 --coins $4 --sender $fpr" "ISSUANCE"
+    ;;
+
+  forge-transfert)
+    if [ -z $user ]; then
+      echo "Requires -u option."
+      exit 1
+    fi
+    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
+    if [ -z $fpr ]; then
+      exit 1
+    fi
+    if [[ -z $2 ]] || [[ -z $3 ]] || [[ -z $4 ]]; then
+      echo "Bad command. Usage: $0 -u [user] forge-issuance [recipient] issuer,number[,...] [multiline comment]"
+      exit 1
+    fi
+    if [[ ! -z $4 ]]; then
+      comment="$4"
+    fi
+    sign "$ucoin forge-transfert --recipient $2 --transfert $3 --sender $fpr" "TRANSFERT"
     ;;
 
   forge-cert)

@@ -109,6 +109,13 @@ module.exports = function(host, port, authenticated, intialized){
       }
     },
 
+    coins: {
+
+      view: function (fingerprint, coinPart, done) {
+        get('/hdc/coins/' + fingerprint + '/view/' + coinPart, done);
+      }
+    },
+
     transactions: {
 
       processs: {

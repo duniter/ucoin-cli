@@ -20,6 +20,7 @@ program
   .option('--membership <request>', 'Signed membership request file to send.')
   .option('--votefile <voteFile>', 'Vote file to send.')
   .option('--coins <base,power[,...]>', 'Coins to create.', splitCoins)
+  .option('--transfert <issuer,number[,...]>', 'Coins to transfert.', splitCoins2)
   .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
   .option('--comment <comment>', 'Comment to add to transaction.')
@@ -284,6 +285,65 @@ program
           return;
         }
         next();
+      }
+    ], function (err, result) {
+      if(err){
+        console.error(err);
+        process.exit(1);
+        return;
+      }
+      console.log(tx.getRaw());
+    });
+    return;
+  }));
+
+program
+  .command('forge-transfert')
+  .description('Forge HDC issuance transaction.')
+  .action(connect(function (node) {
+    var tx = new hdc.Transaction();
+    async.waterfall([
+      function (next){
+        // Options control
+        if(!program.transfert){
+          next('You must give at least one coin with --transfert option');
+          return;
+        }
+        if(!program.sender){
+          next('You must give sender\'s fingerprint with --sender option');
+          return;
+        }
+        if(!program.recipient){
+          next('You must give recipient\'s fingerprint with --recipient option');
+          return;
+        }
+        next();
+      },
+      function (next){
+        node.ucg.peering(next);
+      },
+      function (peering, next){
+        tx.version = "1";
+        tx.currency = peering.currency;
+        tx.sender = program.sender;
+        tx.recipient = program.recipient;
+        tx.type = 'TRANSFERT';
+        tx.comment = program.comment ? program.comment : '';
+        tx.coins = [];
+        // Find last transaction
+        node.hdc.transactions.sender.last(tx.sender, function (err, json) {
+          tx.number = err ? 0 : parseInt(json.transaction.number, 10) + 1;
+          tx.previousHash = err ? null : sha1(json.raw.unix2dos() + json.signature).toUpperCase();
+          next();
+        });
+      },
+      function (next) {
+        async.forEach(program.transfert, function(coin, callback){
+          node.hdc.coins.view(coin.issuer, coin.number, function (err, json) {
+            tx.coins.push(json.id + ', ' + json.transaction);
+            callback(err);
+          });
+        }, next);
       }
     ], function (err, result) {
       if(err){
@@ -575,6 +635,18 @@ function splitCoins (arg) {
     values.push({
       base: parseInt(strings[i], 10),
       power: parseInt(strings[i+1], 10)
+    });
+  }
+  return values;
+}
+
+function splitCoins2 (arg) {
+  var strings = arg.split(',');
+  var values = [];
+  for(var i = 0; i < strings.length - 1; i = i + 2){
+    values.push({
+      issuer: strings[i],
+      number: strings[i+1]
     });
   }
   return values;
