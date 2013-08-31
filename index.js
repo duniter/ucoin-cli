@@ -129,10 +129,18 @@ module.exports = function(host, port, authenticated, intialized){
           txSenderMerkle(arguments, '');
         },
 
+        last: function (fingerprint, done) {
+          get('/hdc/transactions/sender/' + fingerprint + '/last', done);
+        },
+
         issuance: {
 
           get: function () {
             txSenderMerkle(arguments, '/issuance');
+          },
+
+          last: function (fingerprint, done) {
+            get('/hdc/transactions/sender/' + fingerprint + '/issuance/last', done);
           },
 
           dividend: {
@@ -174,6 +182,7 @@ module.exports = function(host, port, authenticated, intialized){
     _(opts).each(function (value, key) {
       url += (i == 0 ? '?' : '&');
       url += key + '=' + value;
+      i++;
     });
     get(url, done);
   }
