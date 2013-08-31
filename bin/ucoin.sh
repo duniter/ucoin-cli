@@ -285,6 +285,14 @@ case "$cmd" in
     rm issuance.ucoin.tmp
     ;;
   
+  tx-transfert)
+    $ucoinsh -u $user forge-transfert $2 $3 $4 > transfert.ucoin.tmp
+    if [ $? -eq 0 ]; then
+      $ucoin transfert --transaction transfert.ucoin.tmp
+    fi
+    rm transfert.ucoin.tmp
+    ;;
+  
   lookup)
     # Must have a search parameter
     if [ -z $2 ]; then
@@ -361,7 +369,7 @@ case "$cmd" in
     if [[ ! -z $4 ]]; then
       comment="$4"
     fi
-    sign "$ucoin forge-transfert --recipient $2 --transfert $3 --sender $fpr" "TRANSFERT"
+    sign "$ucoin forge-transfert --recipient $2 --pay $3 --sender $fpr" "TRANSFERT"
     ;;
 
   forge-cert)

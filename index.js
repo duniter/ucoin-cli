@@ -127,6 +127,15 @@ module.exports = function(host, port, authenticated, intialized){
             "transaction": tx.substring(0, sigIndex),
             "signature": tx.substring(sigIndex)
           });
+        },
+
+        transfert: function (tx, done) {
+          var sigIndex = tx.indexOf("-----BEGIN");
+          post('/hdc/transactions/process/transfert', done)
+          .form({
+            "transaction": tx.substring(0, sigIndex),
+            "signature": tx.substring(sigIndex)
+          });
         }
       },
 

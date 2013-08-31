@@ -20,7 +20,7 @@ program
   .option('--membership <request>', 'Signed membership request file to send.')
   .option('--votefile <voteFile>', 'Vote file to send.')
   .option('--coins <base,power[,...]>', 'Coins to create.', splitCoins)
-  .option('--transfert <issuer,number[,...]>', 'Coins to transfert.', splitCoins2)
+  .option('--pay <issuer,number[,...]>', 'Coins to transfert.', splitCoins2)
   .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
   .option('--comment <comment>', 'Comment to add to transaction.')
@@ -152,6 +152,21 @@ program
     var tx = fs.readFileSync(program.transaction, 'utf8');
     node.hdc.transactions.processs.issuance(tx, proxy(function (res) {
       console.log("Posted issuance transaction");
+    }));
+    return;
+  }));
+
+program
+  .command('transfert')
+  .description('Send transfert transaction.')
+  .action(connect(function (node) {
+    if(!program.transaction){
+      console.error("Requires --transaction parameter");
+      return;
+    }
+    var tx = fs.readFileSync(program.transaction, 'utf8');
+    node.hdc.transactions.processs.transfert(tx, proxy(function (res) {
+      console.log("Posted transfert transaction");
     }));
     return;
   }));
@@ -305,8 +320,8 @@ program
     async.waterfall([
       function (next){
         // Options control
-        if(!program.transfert){
-          next('You must give at least one coin with --transfert option');
+        if(!program.pay){
+          next('You must give at least one coin with --pay option');
           return;
         }
         if(!program.sender){
@@ -338,7 +353,7 @@ program
         });
       },
       function (next) {
-        async.forEach(program.transfert, function(coin, callback){
+        async.forEach(program.pay, function(coin, callback){
           node.hdc.coins.view(coin.issuer, coin.number, function (err, json) {
             tx.coins.push(json.id + ', ' + json.transaction);
             callback(err);
