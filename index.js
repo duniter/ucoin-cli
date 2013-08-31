@@ -111,6 +111,18 @@ module.exports = function(host, port, authenticated, intialized){
 
     transactions: {
 
+      processs: {
+
+        issuance: function (tx, done) {
+          var sigIndex = tx.indexOf("-----BEGIN");
+          post('/hdc/transactions/process/issuance', done)
+          .form({
+            "transaction": tx.substring(0, sigIndex),
+            "signature": tx.substring(sigIndex)
+          });
+        }
+      },
+
       sender: {
 
         get: function () {

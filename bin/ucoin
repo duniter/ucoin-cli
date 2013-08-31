@@ -23,6 +23,7 @@ program
   .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
   .option('--comment <comment>', 'Comment to add to transaction.')
+  .option('--transaction <txFile>', 'Transaction file to send.')
   .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
   .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
@@ -140,6 +141,21 @@ program
   }));
 
 program
+  .command('issue')
+  .description('Send issuance transaction.')
+  .action(connect(function (node) {
+    if(!program.transaction){
+      console.error("Requires --transaction parameter");
+      return;
+    }
+    var tx = fs.readFileSync(program.transaction, 'utf8');
+    node.hdc.transactions.processs.issuance(tx, proxy(function (res) {
+      console.log("Posted issuance transaction");
+    }));
+    return;
+  }));
+
+program
   .command('join')
   .description('Send join membership request.')
   .action(connect(function (node) {
@@ -208,12 +224,12 @@ program
         tx.type = 'ISSUANCE';
         tx.comment = program.comment ? program.comment : '';
         // Find last transaction
-        node.hdc.transactions.sender.get('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', next);
+        node.hdc.transactions.sender.get(tx.sender, next);
       },
       function (json, next){
         tx.number = json.merkle.leavesCount;
         if(tx.number > 0){
-          node.hdc.transactions.sender.get('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', { extract: true, start: json.merkle.leavesCount - 1}, next);
+          node.hdc.transactions.sender.get(tx.sender, { extract: true, start: json.merkle.leavesCount - 1}, next);
         }
         else{
           next(null, { merkle: { leaves: {} } });
@@ -222,22 +238,27 @@ program
       function (json, next) {
         var values = _(json.merkle.leaves).values();
         if(values.length > 0){
-          tx.previousHash = sha1(values[0].raw).toUpperCase();
+          tx.previousHash = sha1(values[0].value.raw.unix2dos() + values[0].value.signature).toUpperCase();
         }
         // Find next issuance coin number
-        node.hdc.transactions.sender.issuance.get('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', next);
+        node.hdc.transactions.sender.issuance.get(tx.sender, next);
       },
       function (json, next){
-        newCoinsStart = json.merkle.leavesCount;
+        node.hdc.transactions.sender.issuance.get(tx.sender, { extract: true, start: json.merkle.leavesCount - 1 }, next);
+      },
+      function (json, next){
+        var tmpTX = new hdc.Transaction(json.merkle.leaves[0].value.raw);
+        var coins = tmpTX.getCoins();
+        newCoinsStart = coins[coins.length-1].number + 1;
         // Find already issued from the amendment
-        node.hdc.transactions.sender.issuance.dividend.amendment('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', amNumber, { extract: true }, next);
+        node.hdc.transactions.sender.issuance.dividend.amendment(tx.sender, amNumber, { extract: true }, next);
       },
       function (json, next){
         // Computes the sum and what is left to create
         var sum = 0;
         _(json.merkle.leaves).each(function (jsonTX) {
-          var aTX = new hdc.Transaction(jsonTX.raw);
-          aTX.getCoins().each(function (coin) {
+          var aTX = new hdc.Transaction(jsonTX.value.raw);
+          aTX.getCoins().forEach(function (coin) {
             sum += coin.base * Math.pow(10, coin.power);
           });
         });
@@ -566,3 +587,15 @@ function splitCoins (arg) {
   }
   return values;
 }
+
+String.prototype.trim = function(){
+  return this.replace(/^\s+|\s+$/g, '');
+};
+
+String.prototype.unix2dos = function(){
+  return this.dos2unix().replace(/\n/g, '\r\n');
+};
+
+String.prototype.dos2unix = function(){
+  return this.replace(/\r\n/g, '\n');
+};

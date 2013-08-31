@@ -17,6 +17,7 @@ cat << EOF
       lookup              Search for a public key
       peering             Show peering informations
       index               List reiceved votes count for each amendment
+      tx-issue            Issue new coins
 
       vote-current [num]  Send a vote according for current amendment of a uCoin server.
       vote-next [num]     Send a vote for next amendment according to a uCoin server\'s state.
@@ -273,6 +274,12 @@ case "$cmd" in
     echo "$join" > join.ucoin.tmp
     echo "`$ucoin join --membership join.ucoin.tmp`"
     rm join.ucoin.tmp
+    ;;
+  
+  tx-issue)
+    echo "`$ucoinsh -u $user forge-issuance $2 $3 $4 $5`" > issuance.ucoin.tmp
+    echo "`$ucoin issue --transaction issuance.ucoin.tmp`"
+    rm issuance.ucoin.tmp
     ;;
   
   lookup)
