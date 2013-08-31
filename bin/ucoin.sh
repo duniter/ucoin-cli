@@ -167,8 +167,8 @@ sign()
     forged=`$command`
   fi
   if [[ ! -z $2 ]] && ! echo "$forged" | grep "$2" > /dev/null; then
-    echo "Does not match '$2'" >&2
     if $verbose; then
+      echo "Does not match '$2'" >&2
       echo "$forged" >&2
     fi
     exit 1
@@ -277,8 +277,10 @@ case "$cmd" in
     ;;
   
   tx-issue)
-    echo "`$ucoinsh -u $user forge-issuance $2 $3 $4 $5`" > issuance.ucoin.tmp
-    echo "`$ucoin issue --transaction issuance.ucoin.tmp`"
+    $ucoinsh -u $user forge-issuance $2 $3 $4 $5 > issuance.ucoin.tmp
+    if [ $? -eq 0 ]; then
+      $ucoin issue --transaction issuance.ucoin.tmp
+    fi
     rm issuance.ucoin.tmp
     ;;
   
