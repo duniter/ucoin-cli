@@ -42,6 +42,7 @@ cat << EOF
     forge-join      Forge and sign a joining membership
     forge-actu      Forge and sign an actualizing membership
     forge-leave     Forge and sign a leaving membership
+    forge-issuance  Forge and sign an issuance transaction
     upstatus        Send a membership request
     vote            Send a vote request
 
@@ -52,7 +53,7 @@ cat << EOF
     -d  Universal Dividend to apply with forge-vote
     -m  Minimal coin 10 power to apply with forge-vote
     -n  In conjunction with forge-vote: will forge vote for next amendment
-    -v  IVerbose mode
+    -v  Verbose mode
     -h  Help
 
 EOF
@@ -65,6 +66,7 @@ dividend=
 mincoin=
 next=false
 verbose=false
+comment=
 while getopts :hs:p:u:d:m:nv OPT; do
   case "$OPT" in
     s)
@@ -158,7 +160,11 @@ sign()
   if [ ! -z $user ]; then
     uuser="-u $user"
   fi
-  forged=`$command`
+  if [[ ! -z $comment ]]; then
+    forged=`$command --comment "$comment"`
+  else
+    forged=`$command`
+  fi
   if [[ ! -z $2 ]] && ! echo "$forged" | grep "$2" > /dev/null; then
     echo "Does not match '$2'" >&2
     if $verbose; then
@@ -308,6 +314,25 @@ case "$cmd" in
       cmd="$ucoin am-current"
     fi
     sign "$cmd" "Number: $2"
+    ;;
+
+  forge-issuance)
+    if [ -z $user ]; then
+      echo "Requires -u option."
+      exit 1
+    fi
+    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
+    if [ -z $fpr ]; then
+      exit 1
+    fi
+    if [[ -z $2 ]] || [[ -z $3 ]] || [[ -z $4 ]]; then
+      echo "Bad command. Usage: $0 -u [user] forge-issuance [amendment number] [amendment hash] coin1base,coin1pow[,...] [multiline comment]"
+      exit 1
+    fi
+    if [[ ! -z $5 ]]; then
+      comment="$5"
+    fi
+    sign "$ucoin forge-issuance $2 $3 --coins $4 --sender $fpr" "ISSUANCE"
     ;;
 
   forge-cert)

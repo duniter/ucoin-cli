@@ -107,7 +107,46 @@ module.exports = function(host, port, authenticated, intialized){
           });
         }
       }
+    },
+
+    transactions: {
+
+      sender: {
+
+        get: function () {
+          txSenderMerkle(arguments, '');
+        },
+
+        issuance: {
+
+          get: function () {
+            txSenderMerkle(arguments, '/issuance');
+          },
+
+          dividend: {
+
+            get: function () {
+              txSenderMerkle(arguments, '/issuance/amendment');
+            },
+
+            amendment: function () {
+              var hash = arguments[0];
+              var number = arguments[1];
+              var opts = arguments.length == 3 ? {} : arguments[2];
+              var done = arguments.length == 3 ? arguments[2] : arguments[3];
+              dealMerkle('/hdc/transactions/sender/' + hash + '/issuance/dividend/' + number, opts, done);
+            }
+          }
+        }
+      }
     }
+  }
+
+  function txSenderMerkle (args, property) {
+    var hash = args[0];
+    var opts = args.length == 2 ? {} : args[1];
+    var done = args.length == 2 ? args[1] : args[2];
+    dealMerkle('/hdc/transactions/sender/' + hash + property, opts, done);
   }
 
   function amMerkle (args, property) {

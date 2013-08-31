@@ -19,6 +19,10 @@ program
   .option('--search <search>', 'Search string')
   .option('--membership <request>', 'Signed membership request file to send.')
   .option('--votefile <voteFile>', 'Vote file to send.')
+  .option('--coins <base,power[,...]>', 'Coins to create.', splitCoins)
+  .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
+  .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
+  .option('--comment <comment>', 'Comment to add to transaction.')
   .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
   .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
@@ -161,6 +165,121 @@ program
     node.hdc.amendments.votes.post(vote, proxy(function (res) {
       console.log("Posted vote for Amendment #" + res.amendment.number);
     }));
+    return;
+  }));
+
+program
+  .command('forge-issuance [am_number] [am_hash]')
+  .description('Forge HDC issuance transaction.')
+  .action(connect(function (amNumber, amHash, node) {
+    var tx = new hdc.Transaction();
+    var newCoinsStart = 0;
+    var am = null;
+    async.waterfall([
+      function (next){
+        // Options control
+        if(!program.coins){
+          next('You must give at least one coin with --coins option');
+          return;
+        }
+        if(!program.sender){
+          next('You must give sender\'s fingerprint with --sender option');
+          return;
+        }
+        next();
+      },
+      function (next){
+        // Find amendment's Dividend and power constraint
+        node.hdc.amendments.view.self(amNumber, amHash, next);
+      },
+      function (amTarget, next){
+        am = amTarget;
+        if(!am.dividend){
+          next('No Universal Dividend available on this amendment.');
+          return;
+        }
+        node.ucg.peering(next);
+      },
+      function (peering, next){
+        tx.version = "1";
+        tx.currency = peering.currency;
+        tx.sender = program.sender;
+        tx.recipient = tx.sender;
+        tx.type = 'ISSUANCE';
+        tx.comment = program.comment ? program.comment : '';
+        // Find last transaction
+        node.hdc.transactions.sender.get('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', next);
+      },
+      function (json, next){
+        tx.number = json.merkle.leavesCount;
+        if(tx.number > 0){
+          node.hdc.transactions.sender.get('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', { extract: true, start: json.merkle.leavesCount - 1}, next);
+        }
+        else{
+          next(null, { merkle: { leaves: {} } });
+        }
+      },
+      function (json, next) {
+        var values = _(json.merkle.leaves).values();
+        if(values.length > 0){
+          tx.previousHash = sha1(values[0].raw).toUpperCase();
+        }
+        // Find next issuance coin number
+        node.hdc.transactions.sender.issuance.get('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', next);
+      },
+      function (json, next){
+        newCoinsStart = json.merkle.leavesCount;
+        // Find already issued from the amendment
+        node.hdc.transactions.sender.issuance.dividend.amendment('B7D232B9AA55465EE8102ADE6ED7E0BF8C85CA75', amNumber, { extract: true }, next);
+      },
+      function (json, next){
+        // Computes the sum and what is left to create
+        var sum = 0;
+        _(json.merkle.leaves).each(function (jsonTX) {
+          var aTX = new hdc.Transaction(jsonTX.raw);
+          aTX.getCoins().each(function (coin) {
+            sum += coin.base * Math.pow(10, coin.power);
+          });
+        });
+        next(null, am.dividend - sum);
+      },
+      function (remainder, next) {
+        if (remainder <= 0) {
+          next('Universal Dividend of this amendment was fully created');
+          return;
+        }
+        tx.coins = [];
+        var sum = 0;
+        var err = null;
+        program.coins.forEach(function (coin) {
+          if(!err){
+            if(am.coinMinPower && coin.power < am.coinMinPower){
+              err = 'Coin must have power > ' + am.coinMinPower;
+              return;
+            }
+            sum += coin.base * Math.pow(10, coin.power);
+            tx.coins.push(tx.sender+'-'+newCoinsStart+'-'+coin.base+'-'+coin.power+'-A-'+amNumber);
+            newCoinsStart++;
+          }
+        });
+        if(err){
+          next(err);
+          return;
+        }
+        if(remainder - sum < 0){
+          next('Amount of coins ('+sum+') exceed your remaining Universal Dividend ('+remainder+') for this amendment');
+          return;
+        }
+        next();
+      }
+    ], function (err, result) {
+      if(err){
+        console.error(err);
+        process.exit(1);
+        return;
+      }
+      console.log(tx.getRaw());
+    });
     return;
   }));
 
@@ -434,4 +553,16 @@ function proxy(callback){
     }
     else callback(res);
   }
+}
+
+function splitCoins (arg) {
+  var strings = arg.split(',');
+  var values = [];
+  for(var i = 0; i < strings.length - 1; i = i + 2){
+    values.push({
+      base: parseInt(strings[i], 10),
+      power: parseInt(strings[i+1], 10)
+    });
+  }
+  return values;
 }
