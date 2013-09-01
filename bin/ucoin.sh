@@ -177,9 +177,16 @@ sign()
   fi
   # Signature only if no error happened
   if [ $? -eq 0 ]; then
-    signed="`echo '$forged' | unix2dos | gpg -s -a $uuser | unix2dos`"
-    echo "$forged" | unix2dos
-    echo "$signed" | unix2dos
+    echo "$forged" | unix2dos > forge.ucoin.tmp
+    if [[ -e forge.ucoin.tmp.asc ]]; then
+      rm forge.ucoin.tmp.asc
+    fi
+    gpg -s -a $uuser forge.ucoin.tmp >> forge.ucoin.tmp
+    unix2dos forge.ucoin.tmp
+    cat forge.ucoin.tmp
+    cat forge.ucoin.tmp.asc
+    rm forge.ucoin.tmp
+    rm forge.ucoin.tmp.asc
   fi
 }
 
