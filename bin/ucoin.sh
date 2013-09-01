@@ -294,6 +294,14 @@ case "$cmd" in
     rm transfert.ucoin.tmp
     ;;
   
+  tx-fusion)
+    $ucoinsh -u $user forge-fusion $2 $3 $4 > fusion.ucoin.tmp
+    if [ $? -eq 0 ]; then
+      $ucoin fusion --transaction fusion.ucoin.tmp
+    fi
+    rm fusion.ucoin.tmp
+    ;;
+  
   lookup)
     # Must have a search parameter
     if [ -z $2 ]; then
