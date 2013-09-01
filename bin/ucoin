@@ -313,6 +313,96 @@ program
   }));
 
 program
+  .command('forge-fusion')
+  .description('Forge HDC fusion transaction.')
+  .action(connect(function (node) {
+    var tx = new hdc.Transaction();
+    var newCoinsStart = 0;
+    var am = null;
+    async.waterfall([
+      function (next){
+        // Options control
+        if(!program.coins || program.coins.length != 1){
+          next('You must give exactly one fusion coin with --coins option');
+          return;
+        }
+        if(!program.pay || program.pay.length <= 1){
+          next('You must give at least two source coins with --pay option');
+          return;
+        }
+        if(!program.sender){
+          next('You must give sender\'s fingerprint with --sender option');
+          return;
+        }
+        next();
+      },
+      function (next){
+        node.ucg.peering(next);
+      },
+      function (peering, next){
+        tx.version = "1";
+        tx.currency = peering.currency;
+        tx.sender = program.sender;
+        tx.recipient = tx.sender;
+        tx.type = 'FUSION';
+        tx.comment = program.comment ? program.comment : '';
+        // Find last transaction
+        node.hdc.transactions.sender.last(tx.sender, function (err, json) {
+          tx.number = err ? 0 : parseInt(json.transaction.number, 10) + 1;
+          tx.previousHash = err ? null : sha1(json.raw.unix2dos() + json.signature).toUpperCase();
+          next();
+        });
+      },
+      function (next) {
+        // Find next issuance coin number
+        node.hdc.transactions.sender.issuance.last(tx.sender, function (err, json) {
+          if(!err){
+            var tmpTX = new hdc.Transaction(json.raw);
+            var coins = tmpTX.getCoins();
+            newCoinsStart = tmpTX.type == 'ISSUANCE' ? coins[coins.length-1].number + 1 : coins[0].number + 1;
+          }
+          next();
+        });
+      },
+      function (next){
+        tx.coins = [];
+        async.forEach(program.pay, function(coin, callback){
+          node.hdc.coins.view(coin.issuer, coin.number, function (err, json) {
+            if(json.owner != tx.sender){
+              callback('Trying to forge a coin you do not own ('+json.id+')');
+              return;
+            }
+            tx.coins.push(json.id + ', ' + json.transaction);
+            callback(err);
+          });
+        }, next);
+      },
+      function (next){
+        var sum = 0;
+        var fusionCoin = { base: program.coins[0].base, power: program.coins[0].power };
+        var fusionned = fusionCoin.base * Math.pow(10, fusionCoin.power);
+        tx.getCoins().forEach(function (coin) {
+          sum += coin.base * Math.pow(10, coin.power);
+        });
+        if(sum != fusionned){
+          next('Bad fusion sum: asked fusion coin ('+fusionned+') with fusion coins value ('+sum+')');
+          return;
+        }
+        tx.coins = _([tx.sender+'-'+newCoinsStart+'-'+fusionCoin.base+'-'+fusionCoin.power+'-F-'+tx.number]).union(tx.coins);
+        next();
+      }
+    ], function (err, result) {
+      if(err){
+        console.error(err);
+        process.exit(1);
+        return;
+      }
+      console.log(tx.getRaw());
+    });
+    return;
+  }));
+
+program
   .command('forge-transfert')
   .description('Forge HDC issuance transaction.')
   .action(connect(function (node) {
