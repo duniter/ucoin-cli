@@ -8,7 +8,7 @@ _ucoin()
   #
   #  The basic options we'll complete.
   #
-  opts="current contract lookup peering index vote-current vote-next send-pubkey send-join send-actu send-leave forge-vote forge-cert forge-join forge-actu forge-leave forge-amendment"
+  opts="current contract lookup peering index vote-current vote-next send-pubkey send-join send-actu send-leave forge-vote forge-cert forge-join forge-actu forge-leave forge-amendment tx-issue tx-transfert tx-fusion tx-show-last tx-sender-show-last"
 
 
   #

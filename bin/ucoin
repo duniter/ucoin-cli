@@ -142,6 +142,56 @@ program
   }));
 
 program
+  .command('tx-show-last [count]')
+  .description('Show last [count] transactions (default to one).')
+  .action(connect(function (count, node) {
+    count = count || 1;
+    node.hdc.transactions.lasts(count, proxy(function (res) {
+      res.transactions.forEach(function (tx) {
+        var hdxTX = new hdc.Transaction();
+        _(hdxTX).keys().forEach(function (key) {
+          if(tx[key]){
+            hdxTX[key] = tx[key];
+          }
+        });
+        hdxTX.coins = [];
+        tx.coins.forEach(function (coin) {
+          hdxTX.coins.push(coin.id + ', ' + coin.transaction_id);
+        })
+        console.log(hdxTX.getRaw());
+      })
+    }));
+    return;
+  }));
+
+program
+  .command('tx-sender-show-last [count]')
+  .description('Show last [count] transactions of sender (default to one).')
+  .action(connect(function (count, node) {
+    count = count || 1;
+    if(!program.sender){
+      console.error("Requires --sender parameter");
+      return;
+    }
+    node.hdc.transactions.sender.lasts(program.sender, count, proxy(function (res) {
+      res.transactions.forEach(function (tx) {
+        var hdxTX = new hdc.Transaction();
+        _(hdxTX).keys().forEach(function (key) {
+          if(tx[key]){
+            hdxTX[key] = tx[key];
+          }
+        });
+        hdxTX.coins = [];
+        tx.coins.forEach(function (coin) {
+          hdxTX.coins.push(coin.id + ', ' + coin.transaction_id);
+        })
+        console.log(hdxTX.getRaw());
+      })
+    }));
+    return;
+  }));
+
+program
   .command('issue')
   .description('Send issuance transaction.')
   .action(connect(function (node) {

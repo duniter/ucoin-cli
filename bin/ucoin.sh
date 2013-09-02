@@ -18,6 +18,8 @@ cat << EOF
       peering             Show peering informations
       index               List reiceved votes count for each amendment
       tx-issue            Issue new coins
+      tx-transfert        Transfert property of coins
+      tx-fusion           Fusion coins to make a bigger coin
 
       vote-current [num]  Send a vote according for current amendment of a uCoin server.
       vote-next [num]     Send a vote for next amendment according to a uCoin server\'s state.

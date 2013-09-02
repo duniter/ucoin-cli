@@ -118,6 +118,14 @@ module.exports = function(host, port, authenticated, intialized){
 
     transactions: {
 
+      last: function (done) {
+        get('/hdc/transactions/last', done);
+      },
+
+      lasts: function (number, done) {
+        get('/hdc/transactions/last/' + number, done);
+      },
+
       processs: {
 
         issuance: function (tx, done) {
@@ -156,6 +164,10 @@ module.exports = function(host, port, authenticated, intialized){
 
         last: function (fingerprint, done) {
           get('/hdc/transactions/sender/' + fingerprint + '/last', done);
+        },
+
+        lasts: function (fingerprint, number, done) {
+          get('/hdc/transactions/sender/' + fingerprint + '/last/' + number, done);
         },
 
         issuance: {
