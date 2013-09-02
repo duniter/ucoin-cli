@@ -2,64 +2,51 @@
 
 usage()
 {
-cat << EOF
+cat > /dev/stderr <<-EOF
 
-  usage: $0 [options] command
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] command
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-issue <#amendment> <coins> [<comment>]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-transfert <recipient> [<comment>]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-fusion [<comment>]
 
-  This script allow to forge HDC documents in accordance with a uCoin server data.
+  Forge and send HDC documents to a uCoin server.
 
   Commands:
 
-    Top level:
+    current             Show current amendment of the contract
+    contract            List all amendments constituting the contract
+    lookup              Search for a public key
+    peering             Show peering informations
+    index               List reiceved votes count for each amendment
+    tx-issue            Issue new coins
+    tx-transfert        Transfert property of coins (coins a read from STDIN)
+    tx-fusion           Fusion coins to make a bigger coin (coins a read from STDIN)
 
-      current             Show current amendment of the contract
-      contract            List all amendments constituting the contract
-      lookup              Search for a public key
-      peering             Show peering informations
-      index               List reiceved votes count for each amendment
-      tx-issue            Issue new coins
-      tx-transfert        Transfert property of coins
-      tx-fusion           Fusion coins to make a bigger coin
+    vote-current [num]  Send a vote according for current amendment of a uCoin server.
+    vote-next [num]     Send a vote for next amendment according to a uCoin server's state.
 
-      vote-current [num]  Send a vote according for current amendment of a uCoin server.
-      vote-next [num]     Send a vote for next amendment according to a uCoin server\'s state.
+                        If [num] is provided, check the vote actually is about amendment
+                        number [num] before signing and sending it (as server's contract
+                        may have evolved between during process).
 
-                          If [num] is provided, check the vote actually is about amendment
-                          number [num] before signing and sending it (as server\'s contract
-                          may have evolved between during process).
+    send-pubkey [file]  Send signed public key [file] to a uCoin server.
+    send-join [file]    Send join request [file] to a uCoin server.
+    send-actu [file]    Send actu request [file] to a uCoin server.
+    send-leave [file]   Send leave request [file] to a uCoin server.
 
-      send-pubkey [file]  Send signed public key [file] to a uCoin server.
-      send-join [file]    Send join request [file] to a uCoin server.
-      send-actu [file]    Send actu request [file] to a uCoin server.
-      send-leave [file]   Send leave request [file] to a uCoin server.
-
-                          If -u option is provided, [file] is ommited.
-                          If [file] is not provided, it is read from STDIN.
-                          Note: [file] may be forged using 'forge-*' commands.
-
-    Lower level:
-
-    forge-amendment Forge and sign the next amendment
-    forge-vote      Forge and sign the current amendment
-    forge-cert      Forge and sign a public key request
-    forge-join      Forge and sign a joining membership
-    forge-actu      Forge and sign an actualizing membership
-    forge-leave     Forge and sign a leaving membership
-    forge-issuance  Forge and sign an issuance transaction
-    forge-transfert Forge and sign a transfert transaction
-    forge-fusion    Forge and sign a fusion transaction
-    upstatus        Send a membership request
-    vote            Send a vote request
+                        If -u option is provided, [file] is ommited.
+                        If [file] is not provided, it is read from STDIN.
+                        Note: [file] may be forged using 'forge-*' commands.
 
   Options:
-    -s  uCoin server to look data in
-    -p  uCoin server port
-    -u  PGP key to use for signature
-    -d  Universal Dividend to apply with forge-vote
-    -m  Minimal coin 10 power to apply with forge-vote
-    -n  In conjunction with forge-vote: will forge vote for next amendment
-    -v  Verbose mode
-    -h  Help
+    -s server     uCoin server to look data in [default 'localhost']
+    -p port       uCoin server port [default '8081']
+    -u user       PGP key to use for signature
+    -d dividend   Universal Dividend to apply with forge-vote
+    -m power10    Minimal coin 10 power to apply with forge-vote
+    -n            In conjunction with forge-vote: will forge vote for next amendment
+    -v            Verbose mode
+    -h            Help
 
 EOF
 }
@@ -184,7 +171,7 @@ sign()
       rm forge.ucoin.tmp.asc
     fi
     gpg -s -a $uuser forge.ucoin.tmp >> forge.ucoin.tmp
-    unix2dos forge.ucoin.tmp
+    unix2dos forge.ucoin.tmp 2> /dev/null
     cat forge.ucoin.tmp
     cat forge.ucoin.tmp.asc
     rm forge.ucoin.tmp
@@ -288,7 +275,7 @@ case "$cmd" in
     ;;
   
   tx-issue)
-    $ucoinsh -u $user forge-issuance $2 $3 $4 $5 > issuance.ucoin.tmp
+    $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
     if [ $? -eq 0 ]; then
       $ucoin issue --transaction issuance.ucoin.tmp
     fi
@@ -296,7 +283,8 @@ case "$cmd" in
     ;;
   
   tx-transfert)
-    $ucoinsh -u $user forge-transfert $2 $3 $4 > transfert.ucoin.tmp
+    coins=`cat`
+    $ucoinsh -u $user forge-transfert $2 $3 $coins > transfert.ucoin.tmp
     if [ $? -eq 0 ]; then
       $ucoin transfert --transaction transfert.ucoin.tmp
     fi
@@ -304,7 +292,8 @@ case "$cmd" in
     ;;
   
   tx-fusion)
-    $ucoinsh -u $user forge-fusion $2 $3 $4 > fusion.ucoin.tmp
+    coins=`cat`
+    $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
     if [ $? -eq 0 ]; then
       $ucoin fusion --transaction fusion.ucoin.tmp
     fi
@@ -361,14 +350,14 @@ case "$cmd" in
     if [ -z $fpr ]; then
       exit 1
     fi
-    if [[ -z $2 ]] || [[ -z $3 ]] || [[ -z $4 ]]; then
-      echo "Bad command. Usage: $0 -u [user] forge-issuance [amendment number] [amendment hash] coin1base,coin1pow[,...] [multiline comment]"
+    if [[ -z $2 ]] || [[ -z $3 ]]; then
+      echo "Bad command. Usage: $0 -u [user] forge-issuance <#amendment> <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
     fi
-    if [[ ! -z $5 ]]; then
-      comment="$5"
+    if [[ ! -z $4 ]]; then
+      comment="$4"
     fi
-    sign "$ucoin forge-issuance $2 $3 --coins $4 --sender $fpr" "ISSUANCE"
+    sign "$ucoin forge-issuance $2 --coins $3 --sender $fpr" "ISSUANCE"
     ;;
 
   forge-transfert)
@@ -380,8 +369,8 @@ case "$cmd" in
     if [ -z $fpr ]; then
       exit 1
     fi
-    if [[ -z $2 ]] || [[ -z $3 ]] || [[ -z $4 ]]; then
-      echo "Bad command. Usage: $0 -u [user] forge-issuance [recipient] issuer,number[,...] [multiline comment]"
+    if [[ -z $2 ]] || [[ -z $3 ]]; then
+      echo "Bad command. Usage: $0 -u [user] forge-transfert <recipient> [<multiline comment>]" >&2
       exit 1
     fi
     if [[ ! -z $4 ]]; then
@@ -399,14 +388,14 @@ case "$cmd" in
     if [ -z $fpr ]; then
       exit 1
     fi
-    if [[ -z $2 ]] || [[ -z $3 ]] || [[ -z $4 ]]; then
-      echo "Bad command. Usage: $0 -u [user] forge-issuance [fusionBase,fusionPower] coin1base,coin1pow[,...] [multiline comment]"
+    if [[ -z $2 ]]; then
+      echo "Bad command. Usage: $0 -u [user] forge-fusion <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
     fi
-    if [[ ! -z $4 ]]; then
-      comment="$4"
+    if [[ ! -z $3 ]]; then
+      comment="$3"
     fi
-    sign "$ucoin forge-fusion --coins $2 --pay $3 --sender $fpr" "FUSION"
+    sign "$ucoin forge-fusion --pay $2 --sender $fpr" "FUSION"
     ;;
 
   forge-cert)

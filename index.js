@@ -69,6 +69,10 @@ module.exports = function(host, port, authenticated, intialized){
         get('/hdc/amendments/current', done);
       },
 
+      promoted: function (number, done) {
+        get('/hdc/amendments/promoted/' + number, done);
+      },
+
       view: {
 
         self: function (number, hash, done) {

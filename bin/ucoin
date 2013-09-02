@@ -266,9 +266,9 @@ program
   }));
 
 program
-  .command('forge-issuance [am_number] [am_hash]')
+  .command('forge-issuance [am_number]')
   .description('Forge HDC issuance transaction.')
-  .action(connect(function (amNumber, amHash, node) {
+  .action(connect(function (amNumber, node) {
     var tx = new hdc.Transaction();
     var newCoinsStart = 0;
     var am = null;
@@ -287,7 +287,7 @@ program
       },
       function (next){
         // Find amendment's Dividend and power constraint
-        node.hdc.amendments.view.self(amNumber, amHash, next);
+        node.hdc.amendments.promoted(amNumber, next);
       },
       function (amTarget, next){
         am = amTarget;
@@ -387,10 +387,6 @@ program
     async.waterfall([
       function (next){
         // Options control
-        if(!program.coins || program.coins.length != 1){
-          next('You must give exactly one fusion coin with --coins option');
-          return;
-        }
         if(!program.pay || program.pay.length <= 1){
           next('You must give at least two source coins with --pay option');
           return;
@@ -444,15 +440,11 @@ program
       },
       function (next){
         var sum = 0;
-        var fusionCoin = { base: program.coins[0].base, power: program.coins[0].power };
-        var fusionned = fusionCoin.base * Math.pow(10, fusionCoin.power);
         tx.getCoins().forEach(function (coin) {
           sum += coin.base * Math.pow(10, coin.power);
         });
-        if(sum != fusionned){
-          next('Bad fusion sum: asked fusion coin ('+fusionned+') with fusion coins value ('+sum+')');
-          return;
-        }
+        var matches = ("" + sum).match(/^(\d)(0*)$/);
+        var fusionCoin = { base: parseInt(matches[1]), power: matches[2].length };
         tx.coins = _([tx.sender+'-'+newCoinsStart+'-'+fusionCoin.base+'-'+fusionCoin.power+'-F-'+tx.number]).union(tx.coins);
         next();
       }
