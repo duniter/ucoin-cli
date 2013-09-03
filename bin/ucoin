@@ -243,6 +243,69 @@ program
   }));
 
 program
+  .command('coins-get [owner]')
+  .description('Get a random set of coins with given values, owned by [owner].')
+  .action(connect(function (owner, node) {
+    if(!owner){
+      console.error('owner is required');
+      return;
+    }
+    if(!program.pay){
+      console.error("Requires --pay parameter");
+      return;
+    }
+    var coins = {};
+    node.hdc.coins.list(owner, proxy(function (res) {
+      res.coins.forEach(function (issued) {
+        issued.ids.forEach(function (id) {
+          var tx = new hdc.Transaction();
+          tx.coins = [];
+          tx.coins.push(issued.issuer + '-' + id);
+          var c = tx.getCoins()[0];
+          var amount = c.base * Math.pow(10, c.power);
+          coins[amount] = coins[amount] || [];
+          coins[amount].push(c);
+        });
+      });
+
+      var get = {};
+      var err = null;
+      program.pay.forEach(function (coin) {
+        var amount = coin.number; // This is bad name
+        amount = parseInt(amount);
+        if(coins[amount] && coins[amount].length > 0){
+          var c = coins[amount][0];
+          get[c.issuer] = get[c.issuer] || [];
+          get[c.issuer].push(c);
+          coins[amount].splice(0,1); // No more available
+        }
+        else{
+          err = 'You do not have enough coins of value (' + amount + ')';
+          return;
+        }
+      });
+
+      if(err){
+        console.error(err);
+        return;
+      }
+
+      var keys = _(get).keys();
+      var str = '';
+      keys.sort().reverse();
+      keys.forEach(function (key) {
+        str += str == '' ? '' : ',';
+        str += key;
+        get[key].forEach(function (coin) {
+          str += ':' + coin.number;
+        });
+      });
+      console.log(str);
+    }));
+    return;
+  }));
+
+program
   .command('issue')
   .description('Send issuance transaction.')
   .action(connect(function (node) {
@@ -858,10 +921,11 @@ function splitCoins2 (arg) {
   var values = [];
   for(var i = 0; i < strings.length; i++){
     var group = strings[i].split(':');
-    for(var j = 1; j < group.length; j++){
+    var start = strings[0].match(/^[A-Z\d]{40}/) ? 1 : 0;
+    for(var j = start; j < group.length; j++){
       if(group[j] && group[j] != ''){
         values.push({
-          issuer: group[0],
+          issuer: start == 1 ? group[0] : '',
           number: group[j]
         });
       }

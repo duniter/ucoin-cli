@@ -9,6 +9,7 @@ cat > /dev/stderr <<-EOF
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-transfert <recipient> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-fusion [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] clist [limit]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] cget <amount[:...]>
 
   Forge and send HDC documents to a uCoin server.
 
@@ -24,6 +25,7 @@ cat > /dev/stderr <<-EOF
     tx-fusion           Fusion coins to make a bigger coin (coins a read from STDIN)
 
     clist               List coins of given user. May be limited by upper amount.
+    cget                Get coins for given values in user account.
 
     vote-current [num]  Send a vote according for current amendment of a uCoin server.
     vote-next [num]     Send a vote for next amendment according to a uCoin server's state.
@@ -339,6 +341,18 @@ case "$cmd" in
     fi
     $ucoin coins-list $fpr $2
     ;;
+  
+  cget)
+    if [ -z $user ]; then
+      echo "Requires -u option."
+      exit 1
+    fi
+    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
+    if [ -z $fpr ]; then
+      exit 1
+    fi
+    $ucoin coins-get $fpr --pay $2
+    ;;
 
   forge-vote)
     cmd=
@@ -366,7 +380,7 @@ case "$cmd" in
       exit 1
     fi
     if [[ -z $2 ]] || [[ -z $3 ]]; then
-      echo "Bad command. Usage: $0 -u [user] forge-issuance <#amendment> <coin1base,coin1pow[,...]> [<multiline comment>]"
+      $verbose && echo "Bad command. Usage: $0 -u [user] forge-issuance <#amendment> <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
     fi
     if [[ ! -z $4 ]]; then
@@ -385,7 +399,7 @@ case "$cmd" in
       exit 1
     fi
     if [[ -z $2 ]] || [[ -z $3 ]]; then
-      echo "Bad command. Usage: $0 -u [user] forge-transfert <recipient> [<multiline comment>]" >&2
+      $verbose && echo "Bad command. Usage: $0 -u [user] forge-transfert <recipient> [<multiline comment>]" >&2
       exit 1
     fi
     if [[ ! -z $4 ]]; then
@@ -404,7 +418,7 @@ case "$cmd" in
       exit 1
     fi
     if [[ -z $2 ]]; then
-      echo "Bad command. Usage: $0 -u [user] forge-fusion <coin1base,coin1pow[,...]> [<multiline comment>]"
+      $verbose && echo "Bad command. Usage: $0 -u [user] forge-fusion <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
     fi
     if [[ ! -z $3 ]]; then
