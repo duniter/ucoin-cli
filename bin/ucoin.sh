@@ -63,8 +63,9 @@ dividend=
 mincoin=
 next=false
 verbose=false
+DEBUG=false
 comment=
-while getopts :hs:p:u:d:m:nv OPT; do
+while getopts :hs:p:u:d:m:nvD OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -87,6 +88,9 @@ while getopts :hs:p:u:d:m:nv OPT; do
     v)
       verbose=true
       ;;
+    D)
+      DEBUG=true
+      ;;
     h)
       usage
       exit 0
@@ -103,7 +107,7 @@ done
 shift `expr $OPTIND - 1`
 
 if [ $# -eq 0 ]; then
-  echo "Need a command."
+  echo "Need a command." >&2
   usage >&2
   exit 1
 fi
@@ -163,10 +167,9 @@ sign()
     forged=`$command`
   fi
   if [[ ! -z $2 ]] && ! echo "$forged" | grep "$2" > /dev/null; then
-    if $verbose; then
-      echo "Does not match '$2'" >&2
-      echo "$forged" >&2
-    fi
+    $DEBUG && echo "DEBUG" >&2
+    $DEBUG && echo "Does not match '$2'" >&2
+    $DEBUG && echo "$forged" >&2
     exit 1
   fi
   # Signature only if no error happened
@@ -280,7 +283,8 @@ case "$cmd" in
     ;;
   
   tx-issue)
-    $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
+      $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
+    ! $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmptmp 2> /dev/null
     if [ $? -eq 0 ]; then
       $ucoin issue --transaction issuance.ucoin.tmp
     fi
@@ -289,7 +293,8 @@ case "$cmd" in
   
   tx-transfert)
     coins=`cat`
-    $ucoinsh -u $user forge-transfert $2 $3 $coins > transfert.ucoin.tmp
+      $DEBUG && $ucoinsh -u $user forge-transfert $2 $3 $coins > transfert.ucoin.tmp
+    ! $DEBUG && $ucoinsh -u $user forge-transfert $2 $3 $coins > transfert.ucoin.tmp 2> /dev/null
     if [ $? -eq 0 ]; then
       $ucoin transfert --transaction transfert.ucoin.tmp
     fi
@@ -298,7 +303,8 @@ case "$cmd" in
   
   tx-fusion)
     coins=`cat`
-    $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
+      $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
+    ! $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmptmp 2> /dev/null
     if [ $? -eq 0 ]; then
       $ucoin fusion --transaction fusion.ucoin.tmp
     fi
