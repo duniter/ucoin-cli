@@ -8,6 +8,7 @@ cat > /dev/stderr <<-EOF
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-issue <#amendment> <coins> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-transfert <recipient> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-fusion [<comment>]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] clist [limit]
 
   Forge and send HDC documents to a uCoin server.
 
@@ -21,6 +22,8 @@ cat > /dev/stderr <<-EOF
     tx-issue            Issue new coins
     tx-transfert        Transfert property of coins (coins a read from STDIN)
     tx-fusion           Fusion coins to make a bigger coin (coins a read from STDIN)
+
+    clist               List coins of given user. May be limited by upper amount.
 
     vote-current [num]  Send a vote according for current amendment of a uCoin server.
     vote-next [num]     Send a vote for next amendment according to a uCoin server's state.
@@ -323,6 +326,18 @@ case "$cmd" in
   
   peering)
     echo "`$ucoin peer`"
+    ;;
+  
+  clist)
+    if [ -z $user ]; then
+      echo "Requires -u option."
+      exit 1
+    fi
+    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
+    if [ -z $fpr ]; then
+      exit 1
+    fi
+    $ucoin coins-list $fpr $2
     ;;
 
   forge-vote)

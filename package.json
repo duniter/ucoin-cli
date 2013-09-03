@@ -33,6 +33,7 @@
     "sha1": "",
     "merkle": "",
     "hdc": ">= 0.0.10",
+    "cli-table": "*",
     "underscore": ""
   },
   "devDependencies": {

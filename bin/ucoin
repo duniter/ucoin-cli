@@ -8,6 +8,7 @@ var sha1    = require('sha1');
 var async   = require('async');
 var _       = require('underscore');
 var merkle  = require('merkle');
+var Table   = require('cli-table');
 
 // Default values
 program.host = "localhost";
@@ -187,6 +188,56 @@ program
         })
         console.log(hdxTX.getRaw());
       })
+    }));
+    return;
+  }));
+
+program
+  .command('coins-list [owner] [upperlimit]')
+  .description('Show coins of given owner, whose value is under [upperlimit].')
+  .action(connect(function (owner, upperlimit, node) {
+    if(!owner){
+      console.error('owner is required');
+      return;
+    }
+    upperlimit = upperlimit ? parseInt(upperlimit) : null;
+    var coins = {};
+    node.hdc.coins.list(owner, proxy(function (res) {
+      var sum = 0;
+      res.coins.forEach(function (issued) {
+        issued.ids.forEach(function (id) {
+          var tx = new hdc.Transaction();
+          tx.coins = [];
+          tx.coins.push(issued.issuer + '-' + id);
+          var c = tx.getCoins()[0];
+          var amount = c.base * Math.pow(10, c.power);
+          if(!upperlimit || upperlimit >= amount){
+            coins[amount] = coins[amount] || [];
+            coins[amount].push(c);
+            sum += amount;
+          }
+        });
+      });
+      console.log("Credit: " + sum);
+      console.log("-------------------");
+      var table = new Table({
+        head: ['Value', 'Issuer', '#'],
+        colWidths: [Math.min(6, (""+sum).length + 5), 41, 10],
+        chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+             , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+             , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+             , 'right': '' , 'right-mid': '' , 'middle': '' },
+        style: { 'padding-left': 0, 'padding-right': 0, compact : true }
+      });
+
+      var keys = _(coins).keys();
+      keys.sort().reverse();
+      keys.forEach(function (key) {
+        coins[key].forEach(function (coin) {
+          table.push([key, coin.issuer, coin.number]);
+        });
+      });
+      console.log(table.toString());
     }));
     return;
   }));
