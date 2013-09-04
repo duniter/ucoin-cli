@@ -284,7 +284,7 @@ case "$cmd" in
   
   tx-issue)
       $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
-    ! $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmptmp 2> /dev/null
+    ! $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp 2> /dev/null
     if [ $? -eq 0 ]; then
       $ucoin issue --transaction issuance.ucoin.tmp
     fi
@@ -304,7 +304,7 @@ case "$cmd" in
   tx-fusion)
     coins=`cat`
       $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
-    ! $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmptmp 2> /dev/null
+    ! $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp 2> /dev/null
     if [ $? -eq 0 ]; then
       $ucoin fusion --transaction fusion.ucoin.tmp
     fi
