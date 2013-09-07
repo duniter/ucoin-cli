@@ -94,7 +94,7 @@ program
   .command('peer')
   .description('Show remote peering informations.')
   .action(connect(function (node) {
-    node.ucg.peering(proxy(function (res) {
+    node.ucg.peering.get(proxy(function (res) {
       console.log("Currency: %s", res.currency);
       console.log("Public key FPR: %s", res.key);
       console.log("Contract: %s", res.contract.currentNumber == '' ? 'none' : res.contract.currentNumber + '-' + res.contract.hash);
@@ -408,7 +408,7 @@ program
           next('No Universal Dividend available on this amendment.');
           return;
         }
-        node.ucg.peering(next);
+        node.ucg.peering.get(next);
       },
       function (peering, next){
         tx.version = "1";
@@ -511,7 +511,7 @@ program
         next();
       },
       function (next){
-        node.ucg.peering(next);
+        node.ucg.peering.get(next);
       },
       function (peering, next){
         tx.version = "1";
@@ -595,7 +595,7 @@ program
         next();
       },
       function (next){
-        node.ucg.peering(next);
+        node.ucg.peering.get(next);
       },
       function (peering, next){
         tx.version = "1";
@@ -670,7 +670,7 @@ program
             // If no amendment, then default
             async.waterfall([
               function (cb){
-                node.ucg.peering(cb);
+                node.ucg.peering.get(cb);
               }
             ], function (err, result) {
               next(err, {
@@ -873,7 +873,7 @@ function connect(callback) {
 }
 
 function forgeMembership (type, node) {
-  node.ucg.peering(proxy(function (peering) {
+  node.ucg.peering.get(proxy(function (peering) {
     node.hdc.amendments.current(function (err, am) {
       var number = 0;
       if(am){

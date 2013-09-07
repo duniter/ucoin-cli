@@ -26,13 +26,85 @@ module.exports = function(host, port, authenticated, intialized){
 
     lookup: function (search, done) {
       get('/pks/lookup?search=' + encodeURIComponent(search) + '&op=index', done);
+    },
+
+    all: function () {
+      var opts = args.length == 1 ? {} : args[0];
+      var done = args.length == 1 ? args[0] : args[1];
+      dealMerkle('/pks/all', opts, done);
     }
   }
 
   this.ucg = {
 
-    peering: function (done) {
-      get('/ucg/peering', done);
+    peering: {
+
+      get: function (done) {
+        get('/ucg/peering', done);
+      },
+
+      peers: {
+
+        upstream: {
+          
+          get: function (done) {
+            get('/ucg/peering/peers/upstream', done);
+          },
+          
+          of: function (fingerprint, done) {
+            get('/ucg/peering/peers/upstream/' + fingerprint, done);
+          },
+        },
+
+        downstream: {
+          
+          get: function (done) {
+            get('/ucg/peering/peers/downstream', done);
+          },
+          
+          of: function (fingerprint, done) {
+            get('/ucg/peering/peers/downstream/' + fingerprint, done);
+          },
+        }
+      },
+
+      subscribe: function (subscription, done) {
+        var sigIndex = subscription.indexOf("-----BEGIN");
+        post('/ucg/peering/subscribe', done)
+        .form({
+          "subscription": subscription.substring(0, sigIndex),
+          "signature": subscription.substring(sigIndex)
+        });
+      },
+
+      status: function (status, done) {
+        var sigIndex = status.indexOf("-----BEGIN");
+        post('/ucg/peering/status', done)
+        .form({
+          "status": status.substring(0, sigIndex),
+          "signature": status.substring(sigIndex)
+        });
+      }
+    },
+
+    tht: {
+
+      get: function (done) {
+        get('/ucg/tht', done);
+      },
+
+      post: function (entry, done) {
+        var sigIndex = entry.indexOf("-----BEGIN");
+        post('/ucg/tht', done)
+        .form({
+          "entry": entry.substring(0, sigIndex),
+          "signature": entry.substring(sigIndex)
+        });
+      },
+
+      of: function (fingerprint, done) {
+        get('/ucg/tht/' + fingerprint, done);
+      }
     }
   }
 
@@ -109,6 +181,10 @@ module.exports = function(host, port, authenticated, intialized){
             "amendment": vote.substring(0, sigIndex),
             "signature": vote.substring(sigIndex)
           });
+        },
+
+        of: function (amendmentNumber, amendmentHash, done) {
+          get('/hdc/amendments/votes/' + amendmentNumber + '-' + amendmentHash, done);
         }
       }
     },
@@ -119,12 +195,28 @@ module.exports = function(host, port, authenticated, intialized){
         get('/hdc/coins/' + fingerprint + '/list', done);
       },
 
-      view: function (fingerprint, coinPart, done) {
-        get('/hdc/coins/' + fingerprint + '/view/' + coinPart, done);
+      view: function (fingerprint, coinNumber, done) {
+        get('/hdc/coins/' + fingerprint + '/view/' + coinNumber, done);
+      },
+
+      history: function (fingerprint, coinNumber, done) {
+        get('/hdc/coins/' + fingerprint + '/view/' + coinNumber + '/history', done);
       }
     },
 
     transactions: {
+
+      all: function () {
+        var opts = args.length == 1 ? {} : args[0];
+        var done = args.length == 1 ? args[0] : args[1];
+        dealMerkle('/transactions/all', opts, done);
+      },
+
+      keys: function () {
+        var opts = args.length == 1 ? {} : args[0];
+        var done = args.length == 1 ? args[0] : args[1];
+        dealMerkle('/transactions/keys', opts, done);
+      },
 
       last: function (done) {
         get('/hdc/transactions/last', done);
@@ -201,8 +293,31 @@ module.exports = function(host, port, authenticated, intialized){
               var done = arguments.length == 3 ? arguments[2] : arguments[3];
               dealMerkle('/hdc/transactions/sender/' + hash + '/issuance/dividend/' + number, opts, done);
             }
+          },
+
+          fusion: function () {
+            txSenderMerkle(arguments, '/issuance/amendment');
           }
+        },
+
+        transfert: function () {
+          txSenderMerkle(arguments, '/issuance/transfert');
         }
+      },
+
+      recipient: function () {
+        var hash = args[0];
+        var opts = args.length == 2 ? {} : args[1];
+        var done = args.length == 2 ? args[1] : args[2];
+        dealMerkle('/hdc/transactions/recipient/' + hash, opts, done);
+      },
+
+      view: function () {
+        var hash = arguments[0];
+        var number = arguments[1];
+        var opts = arguments.length == 3 ? {} : arguments[2];
+        var done = arguments.length == 3 ? arguments[2] : arguments[3];
+        dealMerkle('/hdc/transactions/view/' + hash + '-' + number, opts, done);
       }
     }
   }

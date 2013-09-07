@@ -12,19 +12,253 @@ vucoin('localhost:8081', authentication, function (err, node){
 });
 ```
 
+### Public keys
+
 ```js
-node.pks.add('/path/to/key.pub', '/path/to/signature', function(err, key){
+var key = fs.readFileSync('/path/to/key.pub', 'utf8');
+var sig = fs.readFileSync('/path/to/signature', 'utf8');
+
+node.pks.add(key, sig, function(err, key){
   // Key is now updated
   var fpr = key.fingerprint;
   var name = key.name;
-})
-```
+});
 
-```js
 node.pks.lookup('John Carter', function(err, keys){
   // Results
-})
+});
+
+var merkleOpts = {};
+
+node.pks.all(merkleOpts, function(err, json){
+  // Results
+});
 ```
+### Peering
+```js
+node.ucg.peering.get(function(err, json){
+  // Results
+});
+
+node.ucg.peering.peers.upstream.get(function(err, json){
+  // Results
+});
+
+node.ucg.peering.peers.upstream.of('0124A69D94F4101EFAD727A73A8A49A2960C6826', function(err, json){
+  // Results
+});
+
+node.ucg.peering.peers.downstream.get(function(err, json){
+  // Results
+});
+
+node.ucg.peering.peers.downstream.of('0124A69D94F4101EFAD727A73A8A49A2960C6826', function(err, json){
+  // Results
+});
+
+var subscriptionData  = fs.readFileSync('/path/to/subscription', 'utf8');
+
+node.ucg.peering.subscribe(subscriptionData, function(err, json){
+  // Results
+});
+
+var statusData  = fs.readFileSync('/path/to/status', 'utf8');
+
+node.ucg.peering.subscribe(statusData, function(err, json){
+  // Results
+});
+```
+### Community
+```js
+node.hdc.community.join('/path/to/membership/file', function(err, json){
+  // Results
+});
+
+var merkleOpts = {};
+node.hdc.community.memberships(merkleOpts, function(err, json){
+  // Results
+});
+
+var merkleOpts = {};
+node.hdc.community.votes(merkleOpts, function(err, json){
+  // Results
+});
+```
+### Trust Hash Table
+```js
+var entryData  = fs.readFileSync('/path/to/entry', 'utf8');
+
+node.ucg.tht.get(function(err, json){
+  // Results
+});
+
+node.ucg.tht.post(entryData, function(err, json){
+  // Results
+});
+
+node.ucg.tht.of('0124A69D94F4101EFAD727A73A8A49A2960C6826', function(err, json){
+  // Results
+});
+```
+### Amendments
+```js
+var amendmentNumber = 25;
+var amendmentHash = '0124A69D94F4101EFAD727A73A8A49A2960C6826';
+var merkleOpts = {};
+
+node.hdc.amendments.current(function(err, json){
+  // Results
+});
+
+node.hdc.amendments.promoted(amendmentNumber, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.view.self(amendmentNumber, amendmentHash, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.view.members(amendmentNumber, amendmentHash, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.view.voters(amendmentNumber, amendmentHash, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.view.memberships(amendmentNumber, amendmentHash, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.view.signatures(amendmentNumber, amendmentHash, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.votes.get(function(err, json){
+  // Results
+});
+
+var vote = fs.readFileSync('/path/to/vote', 'utf8');
+
+node.hdc.amendments.votes.post(vote, function(err, json){
+  // Results
+});
+
+node.hdc.amendments.votes.of(amendmentNumber, amendmentHash, function(err, json){
+  // Results
+});
+```
+### Coins
+```js
+var fingerprint = '93B49E9719BABF7EB33C28B9BDFC901EF6358E9C';
+var coinNumber = 2;
+
+node.hdc.coins.list(fingerprint, function(err, json){
+  // Results
+});
+
+node.hdc.coins.view(fingerprint, coinNumber, function(err, json){
+  // Results
+});
+
+node.hdc.coins.history(fingerprint, coinNumber, function(err, json){
+  // Results
+});
+```
+### Transactions
+```js
+var fiveLasts = 5;
+
+node.hdc.transactions.all(function(err, json){
+  // Results
+});
+
+node.hdc.transactions.keys(function(err, json){
+  // Results
+});
+
+node.hdc.transactions.last(function(err, json){
+  // Results
+});
+```
+#### Process
+```js
+var issuanceData  = fs.readFileSync('/path/to/issuance', 'utf8');
+var transfertData = fs.readFileSync('/path/to/transfert', 'utf8');
+var fusionData    = fs.readFileSync('/path/to/fusion', 'utf8');
+
+node.hdc.transactions.lasts(fiveLasts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.process.issuance(issuanceData, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.process.transfert(transfertData, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.process.fusion(fusionData, function(err, json){
+  // Results
+});
+```
+#### Sender
+```js
+var senderFPR = '93B49E9719BABF7EB33C28B9BDFC901EF6358E9C';
+var recipientFPR = 'F01B40DA4962D094F9BFB70A386BCD02789E64C1';
+var merkleOpts = {};
+var lastsFive = 5;
+var amendmentNumber = 25;
+
+node.hdc.transactions.sender.last(senderFPR, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.lasts(senderFPR, lastsFive, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.get(senderFPR, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.issuance.get(senderFPR, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.issuance.last(senderFPR, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.issuance.dividend.get(senderFPR, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.issuance.dividend.amendment(senderFPR, amendmentNumber, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.fusion(senderFPR, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.sender.transfert(senderFPR, merkleOpts, function(err, json){
+  // Results
+});
+
+node.hdc.transactions.recipient(recipientFPR, merkleOpts, function(err, json){
+  // Results
+});
+
+var txNumber = 96;
+
+node.hdc.transactions.view(senderFPR, txNumber, merkleOpts, function(err, json){
+  // Results
+});
+```
+
+#### Recipient
 
 ## Command Line
 
