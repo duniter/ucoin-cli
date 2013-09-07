@@ -15,7 +15,7 @@ program.host = "localhost";
 program.port = "8081";
 
 program
-  .version('0.2.5')
+  .version('0.2.6')
   .option('--key <keyFile>', 'File of the key to submit.')
   .option('--search <search>', 'Search string')
   .option('--membership <request>', 'Signed membership request file to send.')
