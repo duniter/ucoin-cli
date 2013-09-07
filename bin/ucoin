@@ -95,15 +95,14 @@ program
   .description('Show remote peering informations.')
   .action(connect(function (node) {
     node.ucg.peering(proxy(function (res) {
-      console.log("Currency: ", res.currency);
-      console.log("Public key FPR: ", res.key);
-      console.log("Remote host: ", res.remote.host);
-      console.log("Remote port: ", res.remote.port);
-      console.log("Peers number: ", res.peers.length);
-      console.log("Peers list: ");
-      res.peers.forEach(function (peer) {
-        console.log(JSON.stringify(peer));
-      });
+      console.log("Currency: %s", res.currency);
+      console.log("Public key FPR: %s", res.key);
+      console.log("Contract: %s", res.contract.currentNumber == '' ? 'none' : res.contract.currentNumber + '-' + res.contract.hash);
+      console.log("Public keys: %s", res["pks/all"].merkle.leavesCount);
+      res.remote.host != '' && console.log("Remote host: %s", res.remote.host);
+      res.remote.ipv4 != '' && console.log("Remote ipv4: %s", res.remote.ipv4);
+      res.remote.ipv6 != '' && console.log("Remote ipv6: %s", res.remote.ipv6);
+      res.remote.port != null && console.log("Remote port: %s", res.remote.port);
     }));
     return;
   }));
