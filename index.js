@@ -29,8 +29,8 @@ module.exports = function(host, port, authenticated, intialized){
     },
 
     all: function () {
-      var opts = args.length == 1 ? {} : args[0];
-      var done = args.length == 1 ? args[0] : args[1];
+      var opts = arguments.length == 1 ? {} : arguments[0];
+      var done = arguments.length == 1 ? arguments[0] : arguments[1];
       dealMerkle('/pks/all', opts, done);
     }
   }
@@ -211,14 +211,14 @@ module.exports = function(host, port, authenticated, intialized){
     transactions: {
 
       all: function () {
-        var opts = args.length == 1 ? {} : args[0];
-        var done = args.length == 1 ? args[0] : args[1];
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? arguments[0] : arguments[1];
         dealMerkle('/transactions/all', opts, done);
       },
 
       keys: function () {
-        var opts = args.length == 1 ? {} : args[0];
-        var done = args.length == 1 ? args[0] : args[1];
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? arguments[0] : arguments[1];
         dealMerkle('/transactions/keys', opts, done);
       },
 
@@ -310,9 +310,9 @@ module.exports = function(host, port, authenticated, intialized){
       },
 
       recipient: function () {
-        var hash = args[0];
-        var opts = args.length == 2 ? {} : args[1];
-        var done = args.length == 2 ? args[1] : args[2];
+        var hash = arguments[0];
+        var opts = arguments.length == 2 ? {} : arguments[1];
+        var done = arguments.length == 2 ? arguments[1] : arguments[2];
         dealMerkle('/hdc/transactions/recipient/' + hash, opts, done);
       },
 
@@ -399,19 +399,33 @@ module.exports = function(host, port, authenticated, intialized){
   // ====== Initialization ======
   if(authenticated){
     var that = this;
-    console.error("Looking for public key...");
-    require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
+    if(typeof authenticated == "string"){
+      console.error("Looking for public key...");
+      require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
+        try{
+          if(err)
+            throw new Error(err);
+          openpgp.keyring.importPublicKey(body);
+          console.error("Public key imported.");
+          intialized(null, that);
+        }
+        catch(ex){
+          intialized("Remote key could not be retrieved.");
+        }
+      });
+    }
+    else{
       try{
         if(err)
           throw new Error(err);
-        openpgp.keyring.importPublicKey(body);
+        openpgp.keyring.importPublicKey(authenticated);
         console.error("Public key imported.");
         intialized(null, that);
       }
       catch(ex){
-        intialized("Remote key could not be retrieved.");
+        intialized("Bad key given.");
       }
-    });
+    }
   }
   else intialized(null, this);
 
