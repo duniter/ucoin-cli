@@ -33,6 +33,16 @@ program
   .option('-p, --port <port>', 'Port of the node to contact.')
 
 program
+  .command('pubkey')
+  .description('Show remote pubkey in ASCII armored format.')
+  .action(connect(function (node) {
+    node.ucg.pubkey(proxy(function (res) {
+      console.log(res);
+    }));
+    return;
+  }));
+
+program
   .command('pks-add')
   .description('Add signed public keys')
   .action(connect(function (node) {
@@ -860,7 +870,7 @@ program.parse(process.argv);
 function connect(callback) {
   return function () {
     var cbArgs = arguments;
-    vucoin(program.host, program.port, function (err, node) {
+    vucoin(program.host, program.port, true, function (err, node) {
       if(err){
         console.error(err);
         return;

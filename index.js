@@ -37,6 +37,10 @@ module.exports = function(host, port, authenticated, intialized){
 
   this.ucg = {
 
+    pubkey: function (done) {
+      get('/ucg/pubkey', done);
+    },
+
     peering: {
 
       get: function (done) {
@@ -364,16 +368,12 @@ module.exports = function(host, port, authenticated, intialized){
     };
   }
 
-  function requestSuccess(callback) {
-    return _(vucoin_result).partial(callback);
-  }
-
   function get(url, callback) {
-    return require('request').get(requestHead(url), requestSuccess(callback));
+    return require('request').get(requestHead(url), _(vucoin_result).partial(callback));
   }
 
   function post(url, callback) {
-    return require('request').post(requestHead(url), requestSuccess(callback));
+    return require('request').post(requestHead(url), _(vucoin_result).partial(callback));
   }
 
   function vucoin_result(done, err, res, body) {
@@ -384,8 +384,11 @@ module.exports = function(host, port, authenticated, intialized){
       if(res.statusCode == 200){
         if(authenticated)
           verifyResponse(res, body, done);
-        else
-          done(null, JSON.parse(body));
+        else{
+          var result = body;
+          try{ result = JSON.parse(body) } catch(ex) {}
+          done(null, result);
+        }
       }
       else{
         errorCode(res, body, done);
@@ -396,13 +399,13 @@ module.exports = function(host, port, authenticated, intialized){
   // ====== Initialization ======
   if(authenticated){
     var that = this;
-    console.log("Looking for public key...");
+    console.error("Looking for public key...");
     require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
       try{
         if(err)
           throw new Error(err);
         openpgp.keyring.importPublicKey(body);
-        console.log("Public key imported.");
+        console.error("Public key imported.");
         intialized(null, that);
       }
       catch(ex){
@@ -428,14 +431,15 @@ function verifyResponse(res, body, done) {
       var content = body.substring(boundary.length + '\r\n'.length + index1, index2 - '\r\n'.length*2);
       var signature = body.substring(boundary.length + '\r\n'.length + index2, index3 - '\r\n'.length*2);
       signature = "-----BEGIN PGP SIGNED MESSAGE-----\r\nHash: SHA256\r\n\r\n" + content + '\r\n' + signature.substring(signature.lastIndexOf('-----BEGIN PGP SIGNATURE'));
+      // console.log(signature);
       var sig = openpgp.read_message(signature)[0];
       if(sig.verifySignature()){
         // Correct public keys and signature messages
-        content = content.replace('BEGIN PGP PUBLIC KEY BLOCK', '-----BEGIN PGP PUBLIC KEY BLOCK-----');
-        content = content.replace('BEGIN PGP SIGNATURE', '-----BEGIN PGP SIGNATURE-----');
-        content = content.replace('END PGP PUBLIC KEY BLOCK', '-----END PGP PUBLIC KEY BLOCK-----');
-        content = content.replace('END PGP SIGNATURE', '-----END PGP SIGNATURE-----');
-        done(null, JSON.parse(content));
+        content = content.replace(/BEGIN PGP(.*)\r\n/g, '-----BEGIN PGP$1-----\r\n');
+        content = content.replace(/END PGP(.*)\r\n/g, '-----END PGP$1-----\r\n');
+        var result = content;
+        try{ result = JSON.parse(content) } catch(ex) {}
+        done(null, result);
       }
       else done("Signature verification failed");
     }

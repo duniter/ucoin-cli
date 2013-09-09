@@ -19,6 +19,7 @@ cat > /dev/stderr <<-EOF
     contract            List all amendments constituting the contract
     lookup              Search for a public key
     peering             Show peering informations
+    pubkey              Show pubkey of remote node
     index               List reiceved votes count for each amendment
     tx-issue            Issue new coins
     tx-transfert        Transfert property of coins (coins a read from STDIN)
@@ -211,6 +212,10 @@ fromFileOrForge()
 }
 
 case "$cmd" in
+  
+  pubkey)
+    $ucoin pubkey 2> /dev/null
+    ;;
   
   upstatus)
     # Must have a readable file parameter
