@@ -399,7 +399,7 @@ module.exports = function(host, port, authenticated, intialized){
   // ====== Initialization ======
   if(authenticated){
     var that = this;
-    if(typeof authenticated == "string"){
+    if(typeof authenticated != "string"){
       console.error("Looking for public key...");
       require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
         try{
@@ -410,7 +410,7 @@ module.exports = function(host, port, authenticated, intialized){
           intialized(null, that);
         }
         catch(ex){
-          intialized("Remote key could not be retrieved.");
+          intialized("Remote key could not be retrieved: " + ex);
         }
       });
     }
@@ -449,8 +449,8 @@ function verifyResponse(res, body, done) {
       var sig = openpgp.read_message(signature)[0];
       if(sig.verifySignature()){
         // Correct public keys and signature messages
-        content = content.replace(/BEGIN PGP(.*)\r\n/g, '-----BEGIN PGP$1-----\r\n');
-        content = content.replace(/END PGP(.*)\r\n/g, '-----END PGP$1-----\r\n');
+        content = content.replace(/BEGIN PGP([A-Z ]*)/g, '-----BEGIN PGP$1-----');
+        content = content.replace(/END PGP([A-Z ]*)/g, '-----END PGP$1-----');
         var result = content;
         try{ result = JSON.parse(content) } catch(ex) {}
         done(null, result);
