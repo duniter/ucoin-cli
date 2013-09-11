@@ -452,7 +452,7 @@ program
       function (json, next){
         // Computes the sum and what is left to create
         var sum = 0;
-        _(json.merkle.leaves).each(function (jsonTX) {
+        _(json.leaves).each(function (jsonTX) {
           var aTX = new hdc.Transaction(jsonTX.value.raw);
           aTX.getCoins().forEach(function (coin) {
             sum += coin.base * Math.pow(10, coin.power);
@@ -724,7 +724,7 @@ program
       },
       function (json, next) {
         // Map previous memberships states
-        _(json.merkle.leaves).each(function (obj) {
+        _(json.leaves).each(function (obj) {
           if(obj.value.request.status != 'LEAVE')
             mapMss[obj.value.issuer] = obj;
         });
@@ -808,7 +808,7 @@ program
           { extract: true }, next);
       },
       function (json, next) {
-        _(json.merkle.leaves).each(function (obj) {
+        _(json.leaves).each(function (obj) {
           previousVoters.push(obj.value.issuer);
         });
         next(null);
@@ -821,7 +821,7 @@ program
         // Computes + and - deltas
         var voted = [];
         var votes = [];
-        _(json.merkle.leaves).each(function (ms) {
+        _(json.leaves).each(function (ms) {
           voted.push(ms.value.issuer);
           votes.push(ms.hash);
         });
