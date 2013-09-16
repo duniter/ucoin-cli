@@ -192,22 +192,12 @@ node.hdc.transactions.last(function(err, json){
 #### Process
 ```js
 var issuanceData  = fs.readFileSync('/path/to/issuance', 'utf8');
-var transfertData = fs.readFileSync('/path/to/transfert', 'utf8');
-var fusionData    = fs.readFileSync('/path/to/fusion', 'utf8');
 
 node.hdc.transactions.lasts(fiveLasts, function(err, json){
   // Results
 });
 
-node.hdc.transactions.process.issuance(issuanceData, function(err, json){
-  // Results
-});
-
-node.hdc.transactions.process.transfert(transfertData, function(err, json){
-  // Results
-});
-
-node.hdc.transactions.process.fusion(fusionData, function(err, json){
+node.hdc.transactions.process(issuanceData, function(err, json){
   // Results
 });
 ```

@@ -230,34 +230,13 @@ module.exports = function(host, port, authenticated, intialized){
         get('/hdc/transactions/last/' + number, done);
       },
 
-      processs: {
-
-        issuance: function (tx, done) {
-          var sigIndex = tx.indexOf("-----BEGIN");
-          post('/hdc/transactions/process/issuance', done)
-          .form({
-            "transaction": tx.substring(0, sigIndex),
-            "signature": tx.substring(sigIndex)
-          });
-        },
-
-        transfert: function (tx, done) {
-          var sigIndex = tx.indexOf("-----BEGIN");
-          post('/hdc/transactions/process/transfert', done)
-          .form({
-            "transaction": tx.substring(0, sigIndex),
-            "signature": tx.substring(sigIndex)
-          });
-        },
-
-        fusion: function (tx, done) {
-          var sigIndex = tx.indexOf("-----BEGIN");
-          post('/hdc/transactions/process/fusion', done)
-          .form({
-            "transaction": tx.substring(0, sigIndex),
-            "signature": tx.substring(sigIndex)
-          });
-        }
+      processs: function (tx, done) {
+        var sigIndex = tx.indexOf("-----BEGIN");
+        post('/hdc/transactions/process', done)
+        .form({
+          "transaction": tx.substring(0, sigIndex),
+          "signature": tx.substring(sigIndex)
+        });
       },
 
       sender: {

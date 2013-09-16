@@ -323,7 +323,7 @@ program
       return;
     }
     var tx = fs.readFileSync(program.transaction, 'utf8');
-    node.hdc.transactions.processs.issuance(tx, proxy(function (res) {
+    node.hdc.transactions.processs(tx, proxy(function (res) {
       console.log("Posted issuance transaction");
     }));
     return;
@@ -338,7 +338,7 @@ program
       return;
     }
     var tx = fs.readFileSync(program.transaction, 'utf8');
-    node.hdc.transactions.processs.transfert(tx, proxy(function (res) {
+    node.hdc.transactions.processs(tx, proxy(function (res) {
       console.log("Posted transfert transaction");
     }));
     return;
@@ -353,7 +353,7 @@ program
       return;
     }
     var tx = fs.readFileSync(program.transaction, 'utf8');
-    node.hdc.transactions.processs.fusion(tx, proxy(function (res) {
+    node.hdc.transactions.processs(tx, proxy(function (res) {
       console.log("Posted fusion transaction");
     }));
     return;
