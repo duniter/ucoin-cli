@@ -367,7 +367,6 @@ module.exports = function(host, port, authenticated, intialized){
           verifyResponse(res, body, done);
         else{
           var result = body;
-          try{ result = JSON.parse(body) } catch(ex) {}
           done(null, result);
         }
       }
@@ -431,7 +430,6 @@ function verifyResponse(res, body, done) {
         content = content.replace(/BEGIN PGP([A-Z ]*)/g, '-----BEGIN PGP$1-----');
         content = content.replace(/END PGP([A-Z ]*)/g, '-----END PGP$1-----');
         var result = content;
-        try{ result = JSON.parse(content) } catch(ex) {}
         errorCode(res, result, done);
       }
       else done("Signature verification failed");
@@ -454,6 +452,7 @@ function errorCode(res, body, done) {
     done(err);
   }
   else{
-    done(null, body);
+    try{ result = JSON.parse(body) } catch(ex) {}
+    done(null, result);
   }
 }
