@@ -49,6 +49,12 @@ module.exports = function(host, port, authenticated, intialized){
 
       peers: {
 
+        get: function (done) {
+          var opts = arguments.length == 1 ? {} : arguments[0];
+          var done = arguments.length == 1 ? arguments[0] : arguments[1];
+          dealMerkle('/ucg/peering/peers', opts, done);
+        },
+
         upstream: {
           
           get: function (done) {
