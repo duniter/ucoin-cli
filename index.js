@@ -94,7 +94,9 @@ module.exports = function(host, port, authenticated, intialized){
     tht: {
 
       get: function (done) {
-        get('/ucg/tht', done);
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? arguments[0] : arguments[1];
+        dealMerkle('/ucg/tht', opts, done);
       },
 
       post: function (entry, done) {
@@ -360,7 +362,7 @@ module.exports = function(host, port, authenticated, intialized){
     if(err)
       done(err);
     else{
-      if(res.statusCode == 200){
+      if(res.headers['content-type'] && res.headers['content-type'].match(/multipart\/signed/)){
         if(authenticated)
           verifyResponse(res, body, done);
         else{
@@ -379,13 +381,11 @@ module.exports = function(host, port, authenticated, intialized){
   if(authenticated){
     var that = this;
     if(typeof authenticated != "string"){
-      console.error("Looking for public key...");
       require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
         try{
           if(err)
             throw new Error(err);
           openpgp.keyring.importPublicKey(body);
-          console.error("Public key imported.");
           intialized(null, that);
         }
         catch(ex){
@@ -432,7 +432,7 @@ function verifyResponse(res, body, done) {
         content = content.replace(/END PGP([A-Z ]*)/g, '-----END PGP$1-----');
         var result = content;
         try{ result = JSON.parse(content) } catch(ex) {}
-        done(null, result);
+        errorCode(res, result, done);
       }
       else done("Signature verification failed");
     }
@@ -441,6 +441,8 @@ function verifyResponse(res, body, done) {
 }
 
 function errorCode(res, body, done) {
+  var err;
+  if(res.statusCode != 200){
     if(res.statusCode == 400)
       err = "400 - Bad request.";
     else if(res.statusCode == 404)
@@ -450,4 +452,8 @@ function errorCode(res, body, done) {
     }
     err += "\n" + body;
     done(err);
+  }
+  else{
+    done(null, body);
+  }
 }
