@@ -47,6 +47,9 @@ node.pks.all(merkleOpts, function(err, json){
 node.ucg.peering.get(function(err, json){
   // Results
 });
+node.ucg.peering.peers.get(function(err, json){
+  // Results
+});
 
 node.ucg.peering.peers.upstream.get(function(err, json){
   // Results
