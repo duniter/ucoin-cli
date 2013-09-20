@@ -94,6 +94,10 @@ module.exports = function(host, port, authenticated, intialized){
           "status": status.substring(0, sigIndex),
           "signature": status.substring(sigIndex)
         });
+      },
+
+      keys: function (done) {
+        get('/ucg/peering/keys', done);
       }
     },
 
