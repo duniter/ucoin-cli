@@ -97,7 +97,9 @@ module.exports = function(host, port, authenticated, intialized){
       },
 
       keys: function (done) {
-        get('/ucg/peering/keys', done);
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? arguments[0] : arguments[1];
+        dealMerkle('/ucg/peering/keys', opts, done);
       }
     },
 
