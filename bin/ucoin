@@ -108,7 +108,7 @@ program
       console.log("Currency: %s", res.currency);
       console.log("Public key FPR: %s", res.key);
       console.log("Contract: %s", res.contract.currentNumber == '' ? 'none' : res.contract.currentNumber + '-' + res.contract.hash);
-      console.log("Public keys: %s", res["pks/all"].merkle.leavesCount);
+      console.log("Public keys: %s", res["pks/all"].leavesCount);
       res.remote.host != '' && console.log("Remote host: %s", res.remote.host);
       res.remote.ipv4 != '' && console.log("Remote ipv4: %s", res.remote.ipv4);
       res.remote.ipv6 != '' && console.log("Remote ipv6: %s", res.remote.ipv6);
@@ -752,7 +752,7 @@ program
         var newMss = {};
         var leavingMss = {};
         // Memberships computing
-        _(jsonMSS.merkle.leaves).each(function (ms) {
+        _(jsonMSS.leaves).each(function (ms) {
           if(ms.value.request.basis == forgedAM.number){
             mapMss[ms.value.issuer] = ms;
             if(ms.value.request.status == 'JOIN')
@@ -767,7 +767,7 @@ program
         });
         // Members
         var members = [];
-        _(jsonMS.merkle.leaves).each(function (mem) {
+        _(jsonMS.leaves).each(function (mem) {
           members.push(mem.value);
         });
         var memberships = [];
