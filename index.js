@@ -4,11 +4,20 @@ var openpgp = require('./openpgp').openpgp;
 
 openpgp.init();
 
-module.exports = function(host, port, authenticated, intialized){
+module.exports = function(host, port, authenticated, withSignature, intialized){
 
-  if(!intialized){
+  if(typeof authenticated == 'function'){
     intialized = authenticated;
     authenticated = false;
+    withSignature = false;
+  }
+  if(typeof withSignature == 'function'){
+    intialized = withSignature;
+    withSignature = false;
+  }
+
+  if(withSignature && !authenticated){
+    throw new Error('Cannot give signature in unauthenticated mode');
   }
 
   this.host = host;
@@ -419,53 +428,59 @@ module.exports = function(host, port, authenticated, intialized){
   }
   else intialized(null, this);
 
+  function verifyResponse(res, body, done) {
+    var type = res.headers["content-type"];
+    if(type && type.match(/multipart\/signed/)){
+      var boundaries = type.match(/boundary=([\w\d]*);/);
+      if(boundaries.length > 1){
+        var boundary = "--" + boundaries[1];
+        body = body.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+        var index1 = body.indexOf(boundary);
+        var index2 = body.indexOf(boundary, boundary.length + index1);
+        var index3 = body.indexOf(boundary, boundary.length + index2);
+        var content = body.substring(boundary.length + '\r\n'.length + index1, index2 - '\r\n'.length*2);
+        var signature = body.substring(boundary.length + '\r\n'.length + index2, index3 - '\r\n'.length*2);
+        var sigMessage = signature.substring(signature.lastIndexOf('-----BEGIN PGP SIGNATURE'));
+        signature = "-----BEGIN PGP SIGNED MESSAGE-----\r\nHash: SHA256\r\n\r\n" + content + '\r\n' + sigMessage;
+        // console.log(signature);
+        var sig = openpgp.read_message(signature)[0];
+        if(sig.verifySignature()){
+          // Correct public keys and signature messages
+          content = content.replace(/BEGIN PGP([A-Z ]*)/g, '-----BEGIN PGP$1-----');
+          content = content.replace(/END PGP([A-Z ]*)/g, '-----END PGP$1-----');
+          var result = content;
+          errorCode(res, result, sigMessage, done);
+        }
+        else done("Signature verification failed");
+      }
+    }
+    else done("Non signed content.");
+  }
+
+  function errorCode(res, body, signature, done) {
+    if(signature && !done){
+      done = signature;
+      signature = undefined;
+    }
+    var err;
+    if(res.statusCode != 200){
+      if(res.statusCode == 400)
+        err = "400 - Bad request.";
+      else if(res.statusCode == 404)
+        err = "404 - Not found.";
+      else{
+        err = res.statusCode + " - Unknown error.";
+      }
+      err += "\n" + body;
+      done(err);
+    }
+    else{
+      var result = body;
+      try{ result = JSON.parse(body) } catch(ex) {}
+      done(null, result, withSignature ? signature : undefined);
+    }
+  }
+
   return this;
 }
 
-function verifyResponse(res, body, done) {
-  var type = res.headers["content-type"];
-  if(type && type.match(/multipart\/signed/)){
-    var boundaries = type.match(/boundary=([\w\d]*);/);
-    if(boundaries.length > 1){
-      var boundary = "--" + boundaries[1];
-      body = body.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-      var index1 = body.indexOf(boundary);
-      var index2 = body.indexOf(boundary, boundary.length + index1);
-      var index3 = body.indexOf(boundary, boundary.length + index2);
-      var content = body.substring(boundary.length + '\r\n'.length + index1, index2 - '\r\n'.length*2);
-      var signature = body.substring(boundary.length + '\r\n'.length + index2, index3 - '\r\n'.length*2);
-      signature = "-----BEGIN PGP SIGNED MESSAGE-----\r\nHash: SHA256\r\n\r\n" + content + '\r\n' + signature.substring(signature.lastIndexOf('-----BEGIN PGP SIGNATURE'));
-      // console.log(signature);
-      var sig = openpgp.read_message(signature)[0];
-      if(sig.verifySignature()){
-        // Correct public keys and signature messages
-        content = content.replace(/BEGIN PGP([A-Z ]*)/g, '-----BEGIN PGP$1-----');
-        content = content.replace(/END PGP([A-Z ]*)/g, '-----END PGP$1-----');
-        var result = content;
-        errorCode(res, result, done);
-      }
-      else done("Signature verification failed");
-    }
-  }
-  else done("Non signed content.");
-}
-
-function errorCode(res, body, done) {
-  var err;
-  if(res.statusCode != 200){
-    if(res.statusCode == 400)
-      err = "400 - Bad request.";
-    else if(res.statusCode == 404)
-      err = "404 - Not found.";
-    else{
-      err = res.statusCode + " - Unknown error.";
-    }
-    err += "\n" + body;
-    done(err);
-  }
-  else{
-    var result = body;
-    try{ result = JSON.parse(body) } catch(ex) {}
-    done(null, result);
-  }
-}
