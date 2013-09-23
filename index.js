@@ -440,14 +440,11 @@ module.exports = function(host, port, authenticated, withSignature, intialized){
         var index3 = body.indexOf(boundary, boundary.length + index2);
         var content = body.substring(boundary.length + '\r\n'.length + index1, index2 - '\r\n'.length*2);
         var signature = body.substring(boundary.length + '\r\n'.length + index2, index3 - '\r\n'.length*2);
-        var sigMessage = signature.substring(signature.lastIndexOf('-----BEGIN PGP SIGNATURE'));
+        var sigMessage = signature.substring(signature.lastIndexOf('-----BEGIN PGP'));
         signature = "-----BEGIN PGP SIGNED MESSAGE-----\r\nHash: SHA256\r\n\r\n" + content + '\r\n' + sigMessage;
-        // console.log(signature);
-        var sig = openpgp.read_message(signature)[0];
+        var sig = openpgp.read_message(sigMessage)[0];
+        sig.text = content;
         if(sig.verifySignature()){
-          // Correct public keys and signature messages
-          content = content.replace(/BEGIN PGP([A-Z ]*)/g, '-----BEGIN PGP$1-----');
-          content = content.replace(/END PGP([A-Z ]*)/g, '-----END PGP$1-----');
           var result = content;
           errorCode(res, result, sigMessage, done);
         }
