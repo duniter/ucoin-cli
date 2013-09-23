@@ -477,7 +477,10 @@ module.exports = function(host, port, authenticated, withSignature, intialized){
     else{
       var result = body;
       try{ result = JSON.parse(body) } catch(ex) {}
-      done(null, result, withSignature ? signature : undefined);
+      if(withSignature)
+        done(null, result, withSignature ? signature : undefined);
+      else
+        done(null, result);
     }
   }
 
