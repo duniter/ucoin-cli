@@ -464,6 +464,7 @@ function errorCode(res, body, done) {
     done(err);
   }
   else{
+    var result = body;
     try{ result = JSON.parse(body) } catch(ex) {}
     done(null, result);
   }
