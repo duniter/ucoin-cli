@@ -6,12 +6,16 @@ Node.js module to access [ucoin](https://github.com/c-geek/ucoin) server through
 
 ```js
 var vucoin = require('vucoin');
-var authentication = true; // Wether we want authentified responses, or not (as it is costly)
-var giveSignatures = true; // If we want authentified responses, give response signature in callbacks too
-vucoin('localhost', '8081', authentication, function (err, node){
+
+// Wether we want authentified responses, or not (as it is costly)
+var authentication = true;
+
+// If we want authentified responses, give response signature in callbacks too
+var giveSignatures = true;
+
+vucoin('localhost', '8081', authentication, giveSignatures, function (err, node){
 
   // Public key imported, exchanges are signed
-
   node.pks.lookup('John Carter', function(err, keys, signature){
     // Results
   });
