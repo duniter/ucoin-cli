@@ -4,7 +4,11 @@ var openpgp = require('./openpgp').openpgp;
 
 openpgp.init();
 
-module.exports = function(host, port, authenticated, withSignature, intialized){
+module.exports = function (host, port, authenticated, withSignature, intialized){
+  return new vuCoin(host, port, authenticated, withSignature, intialized);
+}
+
+function vuCoin(host, port, authenticated, withSignature, intialized){
 
   if(typeof authenticated == 'function'){
     intialized = authenticated;
