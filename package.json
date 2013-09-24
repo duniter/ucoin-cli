@@ -1,6 +1,6 @@
 {
   "name": "vucoin",
-  "version": "0.3.13",
+  "version": "0.3.14",
   "description": "Node.js module to access ucoin server through its HTTP API",
   "main": "index.js",
   "directories": {
