@@ -56,6 +56,10 @@ module.exports = function(host, port, authenticated, withSignature, intialized){
         get('/ucg/peering', done);
       },
 
+      peer: function (done) {
+        get('/ucg/peering/peer', done);
+      },
+
       peers: {
 
         get: function (done) {
