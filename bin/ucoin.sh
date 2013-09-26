@@ -5,11 +5,11 @@ usage()
 cat > /dev/stderr <<-EOF
 
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] command
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-issue <#amendment> <coins> [<comment>]
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-transfert <recipient> [<comment>]
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] tx-fusion [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] clist [limit]
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] cget <amount[:...]>
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] cget <value1[,...]>
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] issue <#amendment> <coins> [<comment>]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] transfert <recipient> [<comment>]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] fusion [<comment>]
 
   Forge and send HDC documents to a uCoin server.
 
