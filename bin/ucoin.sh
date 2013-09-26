@@ -24,6 +24,13 @@ cat > /dev/stderr <<-EOF
     issue               Issue new coins
     transfert           Transfert property of coins (coins a read from STDIN)
     fusion              Fusion coins to make a bigger coin (coins a read from STDIN)
+    host-add            Add given key fingerprint to hosts managing transactions of key -u
+    host-rm             Same as 'host-add', but remove host instead
+    host-list           List hosts added using 'host-add'
+    trust-add           Add given key fingerprint to hosts key -u trust for receiving transactions
+    trust-rm            Same as 'trust-add', but remove host instead
+    trust-list          List hosts added using 'trust-add'
+
 
     clist               List coins of given user. May be limited by upper amount.
     cget                Get coins for given values in user account.
@@ -57,6 +64,9 @@ cat > /dev/stderr <<-EOF
 EOF
 }
 
+APP_DIR="$HOME/.ucoin"
+hostFile='hosts'
+trustFile='trusts'
 SERVER=
 PORT=
 user=
@@ -66,6 +76,7 @@ next=false
 verbose=false
 DEBUG=false
 comment=
+fpr=
 while getopts :hs:p:u:d:m:nvD OPT; do
   case "$OPT" in
     s)
@@ -212,9 +223,86 @@ fromFileOrForge()
 }
 
 case "$cmd" in
+
+  host-add|host-rm|host-list|trust-add|trust-rm|trust-list|forge-fusion|forge-issuance|forge-transfert|clist|cget)
+    if [ -z $user ]; then
+      echo "Requires -u option."
+      exit 1
+    fi
+    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
+
+    if [ -z $fpr ]; then
+      exit 1
+    fi
+    ;;
+esac
+
+FPR_DIR=
+HOSTS_FILE=
+TRUSTS_FILE=
+case "$cmd" in
+
+  host-add|host-rm|host-list|trust-add|trust-rm|trust-list)
+    # $HOME/.ucoin/ must be a dir
+    if [[ -e $APP_DIR ]] && [[ ! -d $APP_DIR ]]; then
+      echo "$APP_DIR must be a directory" >&2
+      exit 1
+    fi
+    FPR_DIR="$APP_DIR/$fpr"
+    # Create $HOME/.ucoin/$FPR dir, to save host/trust configurations for a given key
+    [[ ! -e $FPR_DIR ]] && mkdir -p $FPR_DIR
+    if [[ -e $FPR_DIR ]] && [[ ! -d $FPR_DIR ]]; then
+      echo "$FPR_DIR must be a directory" >&2
+      exit 1
+    fi
+    case "$cmd" in
+
+      host-add|host-rm|trust-add|trust-rm)
+        if ! echo $2 | grep "^[A-Z\d]{40}$" -P >/dev/null ; then
+          echo "Require a PGP key SHA-1 hash as argument" >&2
+          exit 1
+        fi
+        ;;
+    esac
+    HOSTS_FILE="$FPR_DIR/$hostFile" && touch $HOSTS_FILE
+    TRUSTS_FILE="$FPR_DIR/$trustFile" && touch $TRUSTS_FILE
+    ;;
+esac
+
+case "$cmd" in
   
   pubkey)
     $ucoin pubkey 2> /dev/null
+    ;;
+  
+  host-add)
+    echo $2 >> $HOSTS_FILE
+    sort -u $HOSTS_FILE -o "$HOSTS_FILE"
+    ;;
+  
+  host-rm)
+    sed -i "/$2/d" $HOSTS_FILE
+    ;;
+  
+  host-list)
+    cat $HOSTS_FILE
+    ;;
+  
+  trust-add)
+    echo $2 >> $TRUSTS_FILE
+    sort -u $TRUSTS_FILE -o "$TRUSTS_FILE"
+    ;;
+  
+  trust-rm)
+    sed -i "/$2/d" $TRUSTS_FILE
+    ;;
+  
+  trust-list)
+    cat $TRUSTS_FILE
+    ;;
+  
+  host-list)
+    cat $HOSTS_FILE
     ;;
   
   upstatus)
@@ -342,26 +430,10 @@ case "$cmd" in
     ;;
   
   clist)
-    if [ -z $user ]; then
-      echo "Requires -u option."
-      exit 1
-    fi
-    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
-    if [ -z $fpr ]; then
-      exit 1
-    fi
     $ucoin coins-list $fpr $2
     ;;
   
   cget)
-    if [ -z $user ]; then
-      echo "Requires -u option."
-      exit 1
-    fi
-    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
-    if [ -z $fpr ]; then
-      exit 1
-    fi
     $ucoin coins-get $fpr --pay $2
     ;;
 
@@ -382,14 +454,6 @@ case "$cmd" in
     ;;
 
   forge-issuance)
-    if [ -z $user ]; then
-      echo "Requires -u option."
-      exit 1
-    fi
-    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
-    if [ -z $fpr ]; then
-      exit 1
-    fi
     if [[ -z $2 ]] || [[ -z $3 ]]; then
       $verbose && echo "Bad command. Usage: $0 -u [user] forge-issuance <#amendment> <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
@@ -401,14 +465,6 @@ case "$cmd" in
     ;;
 
   forge-transfert)
-    if [ -z $user ]; then
-      echo "Requires -u option."
-      exit 1
-    fi
-    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
-    if [ -z $fpr ]; then
-      exit 1
-    fi
     if [[ -z $2 ]] || [[ -z $3 ]]; then
       $verbose && echo "Bad command. Usage: $0 -u [user] forge-transfert <recipient> [<multiline comment>]" >&2
       exit 1
@@ -420,14 +476,6 @@ case "$cmd" in
     ;;
 
   forge-fusion)
-    if [ -z $user ]; then
-      echo "Requires -u option."
-      exit 1
-    fi
-    fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
-    if [ -z $fpr ]; then
-      exit 1
-    fi
     if [[ -z $2 ]]; then
       $verbose && echo "Bad command. Usage: $0 -u [user] forge-fusion <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
