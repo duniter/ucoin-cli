@@ -26,10 +26,10 @@ cat > /dev/stderr <<-EOF
     fusion              Fusion coins to make a bigger coin (coins a read from STDIN)
     host-add            Add given key fingerprint to hosts managing transactions of key -u
     host-rm             Same as 'host-add', but remove host instead
-    host-list           List hosts added using 'host-add'
     trust-add           Add given key fingerprint to hosts key -u trust for receiving transactions
     trust-rm            Same as 'trust-add', but remove host instead
-    trust-list          List hosts added using 'trust-add'
+    tht                 Show THT entry resulting of host-* and trust-* commands
+    pub-tht             Publish THT entry according to data returned by 'trust-list' and 'host-list'
 
 
     clist               List coins of given user. May be limited by upper amount.
@@ -190,7 +190,7 @@ sign()
     if [[ -e forge.ucoin.tmp.asc ]]; then
       rm forge.ucoin.tmp.asc
     fi
-    gpg -s -a $uuser forge.ucoin.tmp >> forge.ucoin.tmp
+    gpg -sb -a $uuser forge.ucoin.tmp >> forge.ucoin.tmp
     unix2dos forge.ucoin.tmp 2> /dev/null
     cat forge.ucoin.tmp
     cat forge.ucoin.tmp.asc
@@ -224,7 +224,7 @@ fromFileOrForge()
 
 case "$cmd" in
 
-  host-add|host-rm|host-list|trust-add|trust-rm|trust-list|forge-fusion|forge-issuance|forge-transfert|clist|cget)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-issuance|forge-transfert|clist|cget)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -242,7 +242,7 @@ HOSTS_FILE=
 TRUSTS_FILE=
 case "$cmd" in
 
-  host-add|host-rm|host-list|trust-add|trust-rm|trust-list)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm)
     # $HOME/.ucoin/ must be a dir
     if [[ -e $APP_DIR ]] && [[ ! -d $APP_DIR ]]; then
       echo "$APP_DIR must be a directory" >&2
@@ -284,10 +284,6 @@ case "$cmd" in
     sed -i "/$2/d" $HOSTS_FILE
     ;;
   
-  host-list)
-    cat $HOSTS_FILE
-    ;;
-  
   trust-add)
     echo $2 >> $TRUSTS_FILE
     sort -u $TRUSTS_FILE -o "$TRUSTS_FILE"
@@ -297,12 +293,25 @@ case "$cmd" in
     sed -i "/$2/d" $TRUSTS_FILE
     ;;
   
-  trust-list)
+  tht)
+    echo "Hosters:"
+    cat $HOSTS_FILE
+    echo "Trusts:"
     cat $TRUSTS_FILE
     ;;
   
-  host-list)
-    cat $HOSTS_FILE
+  pub-tht)
+    PUB_FILE="$FPR_DIR/pub"
+    currency=`$ucoin currency`
+    echo "Version: 1" > $PUB_FILE
+    echo "Currency: $currency" >> $PUB_FILE
+    echo "Key: $fpr" >> $PUB_FILE
+    echo "Hosters:" >> $PUB_FILE
+    cat $HOSTS_FILE >> $PUB_FILE
+    echo "Trusts:" >> $PUB_FILE
+    cat $TRUSTS_FILE >> $PUB_FILE
+    unix2dos $PUB_FILE 2>/dev/null
+    sign "cat $PUB_FILE" | $ucoin pub-tht
     ;;
   
   upstatus)

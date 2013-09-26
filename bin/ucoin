@@ -9,6 +9,7 @@ var async   = require('async');
 var _       = require('underscore');
 var merkle  = require('merkle');
 var Table   = require('cli-table');
+var stdinData = '';
 
 // Default values
 program.host = "localhost";
@@ -41,6 +42,35 @@ program
     }));
     return;
   }));
+
+program
+  .command('currency')
+  .description('Give currency name for a given host and port.')
+  .action(connect(function (node) {
+    node.ucg.peering.peer(proxy(function (json) {
+      console.log(json.currency);
+    }));
+    return;
+  }));
+
+program
+  .command('pub-tht')
+  .description('Publish THT entry.')
+  .action(function(){
+    // Read STDIN first
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', function(chunk) {
+      stdinData += chunk;
+    });
+    process.stdin.on('end', function() {
+      connect(function (node) {
+        node.ucg.tht.post(stdinData, proxy(function (json) {
+          console.log('Posted THT entry.');
+        }));
+      })();
+    });
+    return;
+  });
 
 program
   .command('pks-add')
@@ -875,7 +905,7 @@ function connect(callback) {
         console.error(err);
         return;
       }
-      cbArgs.length--;
+      cbArgs.length > 0 && cbArgs.length--;
       cbArgs[cbArgs.length++] = node;
       callback.apply(this, cbArgs);
     });
