@@ -21,9 +21,9 @@ cat > /dev/stderr <<-EOF
     peering             Show peering informations
     pubkey              Show pubkey of remote node
     index               List reiceved votes count for each amendment
-    tx-issue            Issue new coins
-    tx-transfert        Transfert property of coins (coins a read from STDIN)
-    tx-fusion           Fusion coins to make a bigger coin (coins a read from STDIN)
+    issue               Issue new coins
+    transfert           Transfert property of coins (coins a read from STDIN)
+    fusion              Fusion coins to make a bigger coin (coins a read from STDIN)
 
     clist               List coins of given user. May be limited by upper amount.
     cget                Get coins for given values in user account.
@@ -287,7 +287,7 @@ case "$cmd" in
     rm join.ucoin.tmp
     ;;
   
-  tx-issue)
+  issue)
       $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
     ! $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
     if [ $? -eq 0 ]; then
@@ -296,7 +296,7 @@ case "$cmd" in
     rm issuance.ucoin.tmp
     ;;
   
-  tx-transfert)
+  transfert)
     coins=`cat`
       $DEBUG && $ucoinsh -u $user forge-transfert $2 $3 $coins > transfert.ucoin.tmp
     ! $DEBUG && $ucoinsh -u $user forge-transfert $2 $3 $coins > transfert.ucoin.tmp
@@ -306,7 +306,7 @@ case "$cmd" in
     rm transfert.ucoin.tmp
     ;;
   
-  tx-fusion)
+  fusion)
     coins=`cat`
       $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
     ! $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
