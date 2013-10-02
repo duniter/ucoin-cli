@@ -145,36 +145,17 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   this.hdc = {
 
-    community: {
-
-      join: function (membership, done) {
-        var ms = fs.readFileSync(membership, 'utf8');
-        var sigIndex = ms.indexOf("-----BEGIN");
-        post('/hdc/community/join', done)
-        .form({
-          "request": ms.substring(0, sigIndex),
-          "signature": ms.substring(sigIndex)
-        });
-      },
-
-      memberships: function (opts, done) {
-        var done = arguments.length == 1 ? opts : arguments[1];
-        var opts = arguments.length == 1 ? {} : arguments[0];
-        dealMerkle('/hdc/community/memberships', opts, done);
-      },
-
-      votes: function (opts, done) {
-        var opts = arguments.length == 1 ? {} : arguments[0];
-        var done = arguments.length == 1 ? opts : arguments[1];
-        dealMerkle('/hdc/community/votes', opts, done);
-      }
-    },
-
     amendments: {
 
       current: function (done) {
         get('/hdc/amendments/current', done);
       },
+
+      currentVotes: function (opts, done) {
+        var opts = arguments.length == 1 ? {} : arguments[0];
+        var done = arguments.length == 1 ? opts : arguments[1];
+        dealMerkle('/hdc/amendments/current/votes', opts, done);
+      }
 
       promoted: function (number, done) {
         get('/hdc/amendments/promoted/' + number, done);
@@ -192,10 +173,6 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
         voters: function (number, hash, done) {
           amMerkle(arguments, 'voters', done);
-        },
-
-        memberships: function (number, hash, done) {
-          amMerkle(arguments, 'memberships', done);
         },
 
         signatures: function (number, hash, done) {

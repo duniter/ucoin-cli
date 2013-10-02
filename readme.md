@@ -89,22 +89,6 @@ node.ucg.peering.subscribe(statusData, function(err, json){
   // Results
 });
 ```
-### Community
-```js
-node.hdc.community.join('/path/to/membership/file', function(err, json){
-  // Results
-});
-
-var merkleOpts = {};
-node.hdc.community.memberships(merkleOpts, function(err, json){
-  // Results
-});
-
-var merkleOpts = {};
-node.hdc.community.votes(merkleOpts, function(err, json){
-  // Results
-});
-```
 ### Trust Hash Table
 ```js
 var entryData  = fs.readFileSync('/path/to/entry', 'utf8');
@@ -131,6 +115,10 @@ node.hdc.amendments.current(function(err, json){
   // Results
 });
 
+node.hdc.amendments.currentVotes(merkleOpts, function(err, json){
+  // Results
+});
+
 node.hdc.amendments.promoted(amendmentNumber, function(err, json){
   // Results
 });
@@ -144,10 +132,6 @@ node.hdc.amendments.view.members(amendmentNumber, amendmentHash, merkleOpts, fun
 });
 
 node.hdc.amendments.view.voters(amendmentNumber, amendmentHash, merkleOpts, function(err, json){
-  // Results
-});
-
-node.hdc.amendments.view.memberships(amendmentNumber, amendmentHash, merkleOpts, function(err, json){
   // Results
 });
 

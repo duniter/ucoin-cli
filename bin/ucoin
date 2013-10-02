@@ -19,7 +19,6 @@ program
   .version('0.4.0')
   .option('--key <keyFile>', 'File of the key to submit.')
   .option('--search <search>', 'Search string')
-  .option('--membership <request>', 'Signed membership request file to send.')
   .option('--votefile <voteFile>', 'Vote file to send.')
   .option('--coins <base,power[,...]>', 'Coins to create.', splitCoins)
   .option('--pay <issuer,number[,...]>', 'Coins to transfert.', splitCoins2)
@@ -390,20 +389,6 @@ program
   }));
 
 program
-  .command('join')
-  .description('Send join membership request.')
-  .action(connect(function (node) {
-    if(!program.membership){
-      console.error("Requires --membership parameter");
-      return;
-    }
-    node.hdc.community.join(program.membership, proxy(function (res) {
-      console.log("Posted membership request '" + res.request.status + "' of Amendment #" + res.request.basis);
-    }));
-    return;
-  }));
-
-program
   .command('vote')
   .description('Send vote request.')
   .action(connect(function (node) {
@@ -672,30 +657,6 @@ program
   }));
 
 program
-  .command('forge-join')
-  .description('Forge HDC membership JOIN request.')
-  .action(connect(function (node) {
-    forgeMembership('JOIN', node);
-    return;
-  }));
-
-program
-  .command('forge-actu')
-  .description('Forge HDC membership ACTUALIZE request.')
-  .action(connect(function (node) {
-    forgeMembership('ACTUALIZE', node);
-    return;
-  }));
-
-program
-  .command('forge-leave')
-  .description('Forge HDC membership LEAVE request.')
-  .action(connect(function (node) {
-    forgeMembership('LEAVE', node);
-    return;
-  }));
-
-program
   .command('forge-amendment')
   .description('Forge HDC amendment according to uCoin server received data.')
   .action(connect(function (node) {
@@ -741,93 +702,13 @@ program
         next(null);
       },
       function (next) {
-        // Previous memberships states
-        if(forgedAM.previousHash){
-          node.hdc.amendments.view.memberships(
-            forgedAM.number - 1,
-            forgedAM.previousHash,
-            { extract: true }, next);
-        }
-        else{
-          next(null, { merkle: { leaves: [] }});
-        }
-      },
-      function (json, next) {
-        // Map previous memberships states
-        _(json.leaves).each(function (obj) {
-          if(obj.value.request.status != 'LEAVE')
-            mapMss[obj.value.issuer] = obj;
-        });
-        next(null);
-      },
-      function (next) {
-        // Memberships deltas
-        node.hdc.community.memberships({ extract:true }, next);
-      },
-      function (jsonMSS, next) {
-        if(forgedAM.previousHash){
-          // Previous memberships states
-          node.hdc.amendments.view.members(
-            forgedAM.number - 1,
-            forgedAM.previousHash,
-            { extract: true }, function (err, jsonMS) {
-              next(err, jsonMSS, jsonMS);
-            });
-        }
-        else{
-          next(null, jsonMSS, { merkle: { leaves: [] }});
-        }
-      },
-      function (jsonMSS, jsonMS, next) {
-        var newMss = {};
-        var leavingMss = {};
-        // Memberships computing
-        _(jsonMSS.leaves).each(function (ms) {
-          if(ms.value.request.basis == forgedAM.number){
-            mapMss[ms.value.issuer] = ms;
-            if(ms.value.request.status == 'JOIN')
-              newMss[ms.value.issuer] = ms;
-            else if(ms.value.request.status == 'LEAVE')
-              leavingMss[ms.value.issuer] = ms;
-            else if(ms.value.request.status == 'ACTUALIZE'){
-            }
-            else
-              console.error("Bad membership status found:", ms.request.status);
-          }
-        });
         // Members
         var members = [];
-        _(jsonMS.leaves).each(function (mem) {
-          members.push(mem.value);
-        });
-        var memberships = [];
-        _(mapMss).each(function (obj, hash) {
-          memberships.push(obj.hash);
-        })
-        // Memberships + and - deltas (impacts members too)
-        var plusChanges = [];
-        _(newMss).each(function (obj, hash) {
-          plusChanges.push('+' + hash);
-          if(members.indexOf(hash) == -1){
-            members.push(hash);
-          }
-        });
-        var moinChanges = [];
-        _(leavingMss).each(function (obj, hash) {
-          moinChanges.push('-' + hash);
-          var index = members.indexOf(hash);
-          if(~index){
-            members.splice(index, 0);
-          }
-        });
         members.sort();
-        memberships.sort();
         var membersMerkle = merkle(members, 'sha1').process();
-        var membershipsMerkle = merkle(memberships, 'sha1').process();
-        forgedAM.membersChanges = plusChanges.concat(moinChanges);
+        forgedAM.membersChanges = [];
         forgedAM.membersCount = membersMerkle.leaves.length;
         forgedAM.membersRoot = membersMerkle.root();
-        forgedAM.membersStatusRoot = membershipsMerkle.root();
         next(null);
       },
       function (next) {
@@ -845,7 +726,7 @@ program
       },
       function (next) {
         // Signatures of current
-        node.hdc.community.votes({ extract:true }, next);
+        node.hdc.amendments.currentVotes({ extract:true }, next);
       },
       function (json, next) {
         // Computes + and - deltas
@@ -871,7 +752,6 @@ program
         var votesMerkle = merkle(votes, 'sha1').process();
         forgedAM.votersChanges = plusChanges.concat(moinChanges);
         forgedAM.votersCount = votesMerkle.leaves.length;
-        forgedAM.votersSigRoot = votesMerkle.root();
         forgedAM.votersRoot = votedMerkle.root();
         next(null);
       },
@@ -910,23 +790,6 @@ function connect(callback) {
       callback.apply(this, cbArgs);
     });
   };
-}
-
-function forgeMembership (type, node) {
-  node.ucg.peering.get(proxy(function (peering) {
-    node.hdc.amendments.current(function (err, am) {
-      var number = 0;
-      if(am){
-        number = am.number + 1;
-      }
-      var ms = new hdc.Membership();
-      ms.version = "1";
-      ms.currency = peering.currency;
-      ms.basis = number;
-      ms.status = type;
-      console.log(ms.getRaw());
-    });
-  }));
 }
 
 function proxy(callback){

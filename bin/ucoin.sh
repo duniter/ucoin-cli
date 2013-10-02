@@ -43,9 +43,6 @@ cat > /dev/stderr <<-EOF
                         may have evolved between during process).
 
     send-pubkey [file]  Send signed public key [file] to a uCoin server.
-    send-join [file]    Send join request [file] to a uCoin server.
-    send-actu [file]    Send actu request [file] to a uCoin server.
-    send-leave [file]   Send leave request [file] to a uCoin server.
 
                         If -u option is provided, [file] is ommited.
                         If [file] is not provided, it is read from STDIN.
@@ -314,15 +311,6 @@ case "$cmd" in
     sign "cat $PUB_FILE" | $ucoin pub-tht
     ;;
   
-  upstatus)
-    # Must have a readable file parameter
-    if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
-      echo "Parameter must be a readable file" >&2
-      exit 1
-    fi
-    echo "`$ucoin join --membership $2`"
-    ;;
-  
   vote)
     # Must have a readable file parameter
     if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
@@ -361,27 +349,6 @@ case "$cmd" in
     echo "$pubkey" > pubkey.ucoin.tmp
     echo "`$ucoin pks-add --key pubkey.ucoin.tmp`"
     rm pubkey.ucoin.tmp
-    ;;
-  
-  send-join)
-    join=`fromFileOrForge forge-join $2`
-    echo "$join" > join.ucoin.tmp
-    echo "`$ucoin join --membership join.ucoin.tmp`"
-    rm join.ucoin.tmp
-    ;;
-  
-  send-actu)
-    join=`fromFileOrForge forge-actu $2`
-    echo "$join" > join.ucoin.tmp
-    echo "`$ucoin join --membership join.ucoin.tmp`"
-    rm join.ucoin.tmp
-    ;;
-  
-  send-leave)
-    join=`fromFileOrForge forge-leave $2`
-    echo "$join" > join.ucoin.tmp
-    echo "`$ucoin join --membership join.ucoin.tmp`"
-    rm join.ucoin.tmp
     ;;
   
   issue)
