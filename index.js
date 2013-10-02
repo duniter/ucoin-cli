@@ -155,7 +155,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         var opts = arguments.length == 1 ? {} : arguments[0];
         var done = arguments.length == 1 ? opts : arguments[1];
         dealMerkle('/hdc/amendments/current/votes', opts, done);
-      }
+      },
 
       promoted: function (number, done) {
         get('/hdc/amendments/promoted/' + number, done);
