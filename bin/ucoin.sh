@@ -15,38 +15,33 @@ cat > /dev/stderr <<-EOF
 
   Commands:
 
-    current             Show current amendment of the contract
-    contract            List all amendments constituting the contract
-    lookup              Search for a public key
-    peering             Show peering informations
-    pubkey              Show pubkey of remote node
-    index               List reiceved votes count for each amendment
-    issue               Issue new coins
-    transfert           Transfert property of coins (coins a read from STDIN)
-    fusion              Fusion coins to make a bigger coin (coins a read from STDIN)
-    host-add            Add given key fingerprint to hosts managing transactions of key -u
-    host-rm             Same as 'host-add', but remove host instead
-    trust-add           Add given key fingerprint to hosts key -u trust for receiving transactions
-    trust-rm            Same as 'trust-add', but remove host instead
-    tht                 Show THT entry resulting of host-* and trust-* commands
-    pub-tht             Publish THT entry according to data returned by 'trust-list' and 'host-list'
+    current       Show current amendment of the contract
+    contract      List all amendments constituting the contract
+    lookup        Search for a public key
+    peering       Show peering informations
+    pubkey        Show pubkey of remote node
+    index         List reiceved votes count for each amendment
+    issue         Issue new coins
+    transfert     Transfert property of coins (coins a read from STDIN)
+    fusion        Fusion coins to make a bigger coin (coins a read from STDIN)
+    host-add      Add given key fingerprint to hosts managing transactions of key -u
+    host-rm       Same as 'host-add', but remove host instead
+    trust-add     Add given key fingerprint to hosts key -u trust for receiving transactions
+    trust-rm      Same as 'trust-add', but remove host instead
+    tht           Show THT entry resulting of host-* and trust-* commands
+    pub-tht       Publish THT entry according to data returned by 'trust-list' and 'host-list'
 
 
     clist               List coins of given user. May be limited by upper amount.
     cget                Get coins for given values in user account.
 
-    vote-current [num]  Send a vote according for current amendment of a uCoin server.
-    vote-next [num]     Send a vote for next amendment according to a uCoin server's state.
-
-                        If [num] is provided, check the vote actually is about amendment
-                        number [num] before signing and sending it (as server's contract
-                        may have evolved between during process).
-
     send-pubkey [file]  Send signed public key [file] to a uCoin server.
-
                         If -u option is provided, [file] is ommited.
                         If [file] is not provided, it is read from STDIN.
                         Note: [file] may be forged using 'forge-*' commands.
+
+    vote        [file]  Signs given amendment [file] and sends it to a uCoin server.
+                        If [file] is not provided, it is read from STDIN.
 
   Options:
     -s server     uCoin server to look data in [default 'localhost']
@@ -221,7 +216,7 @@ fromFileOrForge()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-issuance|forge-transfert|clist|cget)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-issuance|forge-transfert|clist|cget|vote)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -268,6 +263,10 @@ esac
 
 case "$cmd" in
   
+  sign)
+    sign "cat" 2> /dev/null
+    ;;
+  
   pubkey)
     $ucoin pubkey 2> /dev/null
     ;;
@@ -313,35 +312,33 @@ case "$cmd" in
   
   vote)
     # Must have a readable file parameter
-    if [ -z $2 ] || [ ! -e $2 ] || [ ! -r $2 ]; then
+    if [ -z $2 ]; then
+      # Read from STDIN
+      sign "cat" > vote.ucoin.tmp
+    elif [ -e $2 ] && [ -r $2 ]; then
+      # Read from file
+      sign "cat $2"  > vote.ucoin.tmp
+    else
       echo "Parameter must be a readable file" >&2
       exit 1
     fi
-    echo "`$ucoin vote --votefile $2`"
+    $ucoinsh send-vote vote.ucoin.tmp
+    rm vote.ucoin.tmp
     ;;
   
-  vote-current)
-    if [[ ! -z $user ]]; then
-      user="-u $user"
+  send-vote)
+    # Must have a readable file parameter
+    if [ -z $2 ]; then
+      # Read from STDIN
+      var=`cat`
+    elif [ -e $2 ] && [ -r $2 ]; then
+      # Read from file
+      var=$2
+    else
+      echo "Parameter must be a readable file" >&2
+      exit 1
     fi
-    current=`$ucoinsh $user forge-vote $2`
-    if ! echo "$current" | grep "Does not match" > /dev/null ; then
-      echo "$current" > current.ucoin.tmp
-      echo "`$ucoinsh vote current.ucoin.tmp`"
-      rm current.ucoin.tmp
-    fi
-    ;;
-  
-  vote-next)
-    if [[ ! -z $user ]]; then
-      user="-u $user"
-    fi
-    next=`$ucoinsh $user -n forge-vote $2`
-    if ! echo "$current" | grep "Does not match" > /dev/null ; then
-      echo "$next" > next.ucoin.tmp
-      echo "`$ucoinsh vote next.ucoin.tmp`"
-      rm next.ucoin.tmp
-    fi
+    $ucoin vote --votefile "$var"
     ;;
   
   send-pubkey)
@@ -411,22 +408,6 @@ case "$cmd" in
   
   cget)
     $ucoin coins-get $fpr --pay $2
-    ;;
-
-  forge-vote)
-    cmd=
-    if $next ; then
-      cmd="$ucoin forge-amendment"
-      if [ ! -z $dividend ]; then
-        cmd="$cmd --dividend $dividend"
-      fi
-      if [ ! -z $mincoin ]; then
-        cmd="$cmd --mincoin $mincoin"
-      fi
-    else
-      cmd="$ucoin am-current"
-    fi
-    sign "$cmd" "Number: $2"
     ;;
 
   forge-issuance)
