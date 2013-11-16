@@ -55,6 +55,7 @@ cat > /dev/stderr <<-EOF
     -d dividend   Universal Dividend (to apply with forge-am)
     -m power10    Minimal coin 10 power (to apply with forge-am)
     -n votes      Number of required votes (to apply with forge-am)
+    -c            Responds 'yes' on confirmation questions.
     -v            Verbose mode
     -h            Help
 
@@ -71,11 +72,12 @@ dividend=
 mincoin=
 votes=
 timestamp=
+confirm=true
 verbose=false
 DEBUG=false
 comment=
 fpr=
-while getopts :hs:p:u:t:d:m:n:vD OPT; do
+while getopts :hs:p:u:t:d:m:n:vDc OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -103,6 +105,9 @@ while getopts :hs:p:u:t:d:m:n:vD OPT; do
       ;;
     D)
       DEBUG=true
+      ;;
+    c)
+      confirm=false
       ;;
     h)
       usage
@@ -235,6 +240,26 @@ fromFileOrForge()
   echo "$var"
 }
 
+confirmThat()
+{
+  ok=false
+  while ! $ok ; do
+    read -p "$1" choice
+    case $choice in
+      [yYoO])
+        ok=true
+        true
+        ;;
+      [nN])
+        ok=true
+        false
+        ;;
+      **)
+        ;;
+    esac
+  done
+}
+
 case "$cmd" in
 
   tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-issuance|forge-transfert|clist|cget|vote)
@@ -335,16 +360,33 @@ case "$cmd" in
     # Must have a readable file parameter
     if [ -z $2 ]; then
       # Read from STDIN
-      sign "cat" > vote.ucoin.tmp
+      amendment=`cat`
     elif [ -e $2 ] && [ -r $2 ]; then
       # Read from file
-      sign "cat $2"  > vote.ucoin.tmp
+      amendment=`cat $2`
     else
       echo "Parameter must be a readable file" >&2
       exit 1
     fi
-    $ucoinsh send-vote vote.ucoin.tmp
-    rm vote.ucoin.tmp
+    echo "------------------------"
+    echo "Amendment to sign:"
+    echo "------------------------"
+    echo "$amendment"
+    echo "------------------------"
+    echo "$amendment" > am.ucoin.tmp
+    if ! $confirm || confirmThat "You are about to vote for this amendment by signing and sending it. Do wish to continue? [y/n] "; then
+      echo "Signing amendment..."
+      sign "cat am.ucoin.tmp"  > vote.ucoin.tmp
+      $ucoinsh send-vote vote.ucoin.tmp
+    else
+      echo "Aborting..."
+    fi
+    if [[ -e am.ucoin.tmp ]]; then
+      rm am.ucoin.tmp
+    fi
+    if [[ -e vote.ucoin.tmp ]]; then
+      rm vote.ucoin.tmp
+    fi
     ;;
   
   send-vote)
