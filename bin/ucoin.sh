@@ -30,6 +30,10 @@ cat > /dev/stderr <<-EOF
     trust-rm      Same as 'trust-add', but remove host instead
     tht           Show THT entry resulting of host-* and trust-* commands
     pub-tht       Publish THT entry according to data returned by 'trust-list' and 'host-list'
+    forge-am      Forge an amendment, following currently promoted of given node.
+                  To be used in combination with -d, -m, -t, -n options.
+                  It might be given a string for members and voters changes from STDIN,
+                  with format "[+FPR_MEMBER[...]][-FPR_MEMBER2[...]][;[+FPR_VOTER1[...]][-FPR_VOTER2[...]]]".
 
 
     clist               List coins of given user. May be limited by upper amount.
@@ -47,9 +51,10 @@ cat > /dev/stderr <<-EOF
     -s server     uCoin server to look data in [default 'localhost']
     -p port       uCoin server port [default '8081']
     -u user       PGP key to use for signature
-    -d dividend   Universal Dividend to apply with forge-vote
-    -m power10    Minimal coin 10 power to apply with forge-vote
-    -n            In conjunction with forge-vote: will forge vote for next amendment
+    -t timestamp  Generation timestamp (to apply with forge-am)
+    -d dividend   Universal Dividend (to apply with forge-am)
+    -m power10    Minimal coin 10 power (to apply with forge-am)
+    -n votes      Number of required votes (to apply with forge-am)
     -v            Verbose mode
     -h            Help
 
@@ -64,12 +69,13 @@ PORT=
 user=
 dividend=
 mincoin=
-next=false
+votes=
+timestamp=
 verbose=false
 DEBUG=false
 comment=
 fpr=
-while getopts :hs:p:u:d:m:nvD OPT; do
+while getopts :hs:p:u:t:d:m:n:vD OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -87,7 +93,10 @@ while getopts :hs:p:u:d:m:nvD OPT; do
       mincoin="$OPTARG"
       ;;
     n)
-      next=true
+      votes="$OPTARG"
+      ;;
+    t)
+      timestamp="$OPTARG"
       ;;
     v)
       verbose=true
@@ -145,10 +154,22 @@ fi
 
 if [ ! -z $dividend ]; then
   ucoinsh="$ucoinsh -d $dividend"
+  ucoin="$ucoin --dividend $dividend"
 fi
 
 if [ ! -z $mincoin ]; then
   ucoinsh="$ucoinsh -m $mincoin"
+  ucoin="$ucoin --mincoin $mincoin"
+fi
+
+if [ ! -z $votes ]; then
+  ucoinsh="$ucoinsh -n $votes"
+  ucoin="$ucoin --votes $votes"
+fi
+
+if [ ! -z $timestamp ]; then
+  ucoinsh="$ucoinsh -t $timestamp"
+  ucoin="$ucoin --timestamp $timestamp"
 fi
 
 if $verbose; then
@@ -463,8 +484,15 @@ case "$cmd" in
     sign "$ucoin forge-leave"
     ;;
 
-  forge-amendment)
-    sign "$ucoin forge-amendment"
+  forge-am)
+    changes=`cat`
+    mchanges="$changes"
+    vchanges=""
+    if echo "$changes" | grep ";" > /dev/null; then
+      mchanges=`echo $changes | sed -e "s/;.*//g"`
+      vchanges=`echo $changes | sed -e "s/.*;//g"`
+    fi
+    $ucoin forge-amendment --mchanges "\"$mchanges\"" --vchanges "\"$vchanges\""
     ;;
 
   **)

@@ -32,7 +32,7 @@
     "async": "",
     "sha1": "",
     "merkle": "",
-    "hdc": ">= 0.0.10",
+    "hdc": ">= 0.1.0",
     "cli-table": "*",
     "underscore": ""
   },

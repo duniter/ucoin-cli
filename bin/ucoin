@@ -28,7 +28,11 @@ program
   .option('--transaction <txFile>', 'Transaction file to send.')
   .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
   .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
+  .option('-n, --votes <number>', 'Number of votes required for amendment.', parseInt)
   .option('-s, --signature <sigFile>', 'File of a signature to append.')
+  .option('-t, --timestamp <timestamp>', 'Timestamp used for GeneratedOn field in amendment.', parseInt)
+  .option('--mchanges <+-fingerprints>', 'Members changes: chain of fingerprints, preceeded by a + or - char.')
+  .option('--vchanges <+-fingerprints>', 'Voters changes: chain of fingerprints, preceeded by a + or - char.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
 
@@ -664,8 +668,25 @@ program
     var mapMss = {};
     var mapSig = {};
     var previousVoters = [];
+    var membersChanges = toChanges(program.mchanges);
+    var votersChanges = toChanges(program.vchanges);
+    var membersToAdd = _(membersChanges)
+      .filter(filterPlus)
+      .map(withoutPlusOrMinus);
+    var membersToRemove = _(membersChanges)
+      .filter(filterMinus)
+      .map(withoutPlusOrMinus);
+    var votersToAdd = _(votersChanges)
+      .filter(filterPlus)
+      .map(withoutPlusOrMinus);
+    var votersToRemove = _(votersChanges)
+      .filter(filterMinus)
+      .map(withoutPlusOrMinus);
+    // If any members to add is also to remove
+    membersToAdd = _(membersToAdd).difference(membersToRemove);
     async.waterfall([
       function (next){
+        // Build an amendment following current amendment of the node
         node.hdc.amendments.current(function (err, am) {
           if(!am){
             // If no amendment, then default
@@ -690,69 +711,124 @@ program
         forgedAM.version = 1;
         forgedAM.currency = am.currency;
         forgedAM.number = am.number + 1;
-        forgedAM.dividend = program.dividend;
-        forgedAM.coinMinPower = program.mincoin;
-        forgedAM.votersCount = am.votersCount;
-        forgedAM.membersCount = am.membersCount;
-        forgedAM.membersChanges = [];
-        forgedAM.votersChanges = [];
+        forgedAM.dividend = program.dividend; // If no dividend, field is null hence not taken
+        forgedAM.coinMinPower = program.mincoin; // Same as dividend
+        forgedAM.nextVotes = program.votes;
+        forgedAM.generated = program.timestamp;
         if(am.raw){
           forgedAM.previousHash = sha1(am.raw).toUpperCase();
         }
         next(null);
       },
       function (next) {
-        // Members
+        // Getting previous amendment members tree
+        if (forgedAM.number == 0) {
+            next(null, { leaves: {} });
+        } else {
+          node.hdc.amendments.view.members(forgedAM.number - 1, forgedAM.previousHash, {
+            extract: true
+          }, next);
+        }
+      },
+      function (json, next){
+        // Computes new members tree
         var members = [];
+        var previousMembers = [];
+        var reallyAddedMembers = [];
+        var reallyRemovedMembers = [];
+        // Add previous members
+        _(json.leaves).values().forEach(function(item){
+          var fingerprint = item.value;
+          members.push(fingerprint);
+          previousMembers.push(fingerprint);
+        });
+        // Add new members
+        membersToAdd.forEach(function(fingerprint){
+          members.push(fingerprint);
+        });
         members.sort();
+        var isSorted = true;
+        // Remove eventual duplicates
+        members = _(members).uniq(isSorted);
+        // Remove members to remove
+        members = _(members).difference(membersToRemove);
+        reallyAddedMembers = _(members).difference(previousMembers);
+        reallyRemovedMembers = _(membersToRemove).difference(members);
+        reallyRemovedMembers = _(reallyRemovedMembers).intersection(previousMembers);
         var membersMerkle = merkle(members, 'sha1').process();
+        // Writes members changes
         forgedAM.membersChanges = [];
+        reallyAddedMembers.forEach(function(fpr){
+          forgedAM.membersChanges.push('+' + fpr);
+        });
+        reallyRemovedMembers.forEach(function(fpr){
+          forgedAM.membersChanges.push('-' + fpr);
+        });
+        forgedAM.membersChanges.sort(); // Important to have a valid amendment
         forgedAM.membersCount = membersMerkle.leaves.length;
         forgedAM.membersRoot = membersMerkle.root();
         next(null);
       },
       function (next) {
-        // Previous signatures
-        node.hdc.amendments.view.signatures(
-          forgedAM.number - 1,
-          forgedAM.previousHash,
-          { extract: true }, next);
+        // Getting previous amendment voters tree
+        if (forgedAM.number == 0) {
+            next(null, { leaves: {} });
+        } else {
+          node.hdc.amendments.view.voters(forgedAM.number - 1, forgedAM.previousHash, {
+            extract: true
+          }, next);
+        }
       },
-      function (json, next) {
-        _(json.leaves).each(function (obj) {
-          previousVoters.push(obj.value.issuer);
+      function (json, next){
+        // Computes new voters tree
+        var voters = [];
+        var previousVoters = [];
+        var reallyAddedVoters = [];
+        var reallyRemovedVoters = [];
+        // Add previous voters
+        _(json.leaves).values().forEach(function(item){
+          var fingerprint = item.value;
+          voters.push(fingerprint);
+          previousVoters.push(fingerprint);
         });
+        // Add new voters
+        votersToAdd.forEach(function(fingerprint){
+          voters.push(fingerprint);
+        });
+        voters.sort();
+        var isSorted = true;
+        // Remove eventual duplicates
+        voters = _(voters).uniq(isSorted);
+        // Remove voters to remove
+        voters = _(voters).difference(votersToRemove);
+        reallyAddedVoters = _(voters).difference(previousVoters);
+        reallyRemovedVoters = _(votersToRemove).difference(voters);
+        var votersMerkle = merkle(voters, 'sha1').process();
+        // Writes voters changes
+        forgedAM.votersChanges = [];
+        reallyAddedVoters.forEach(function(fpr){
+          forgedAM.votersChanges.push('+' + fpr);
+        });
+        reallyRemovedVoters.forEach(function(fpr){
+          forgedAM.votersChanges.push('-' + fpr);
+        });
+        forgedAM.votersChanges.sort(); // Important to have a valid amendment
+        forgedAM.votersCount = votersMerkle.leaves.length;
+        forgedAM.votersRoot = votersMerkle.root();
         next(null);
       },
       function (next) {
         // Signatures of current
-        node.hdc.amendments.currentVotes({ extract:true }, next);
+        if (forgedAM.number == 0) {
+            next('Does not have previous votes: we are building root amendment');
+            return;
+        }
+        node.hdc.amendments.currentVotes({}, next);
       },
       function (json, next) {
-        // Computes + and - deltas
-        var voted = [];
-        var votes = [];
-        _(json.leaves).each(function (ms) {
-          voted.push(ms.value.issuer);
-          votes.push(ms.hash);
-        });
-        var newVoters = _(voted).difference(previousVoters);
-        var leavingVoters = _(previousVoters).difference(voted);
-        var plusChanges = [];
-        newVoters.forEach(function (hash) {
-          plusChanges.push('+' + hash);
-        });
-        var moinChanges = [];
-        leavingVoters.forEach(function (hash) {
-          moinChanges.push('-' + hash);
-        });
-        votes.sort();
-        voted.sort();
-        var votedMerkle = merkle(voted, 'sha1').process();
-        var votesMerkle = merkle(votes, 'sha1').process();
-        forgedAM.votersChanges = plusChanges.concat(moinChanges);
-        forgedAM.votersCount = votesMerkle.leaves.length;
-        forgedAM.votersRoot = votedMerkle.root();
+        // Becomes votes of previous
+        forgedAM.previousVotesCount = json.leavesCount;
+        forgedAM.previousVotesRoot = json.levels["0"][0];
         next(null);
       },
     ], function (err, result) {
@@ -834,6 +910,32 @@ function splitCoins2 (arg) {
     }
   }
   return values;
+}
+
+function toChanges (str) {
+  var changesStr = (str || "")
+    .replace(/"/g, '')
+    .replace(/\+/g, ';+')
+    .replace(/-/g, ';-');
+  var changes = [];
+  changesStr.split(';').forEach(function(item){
+    if (item != "") {
+      changes.push(item);
+    }
+  });
+  return changes;
+}
+
+function filterPlus (item){
+  return item.match(/\+/);
+}
+
+function filterMinus (item){
+  return item.match(/-/);
+}
+
+function withoutPlusOrMinus(item){
+  return item.substr(1);
 }
 
 String.prototype.trim = function(){
