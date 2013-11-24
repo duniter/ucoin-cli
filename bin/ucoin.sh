@@ -31,8 +31,8 @@ cat > /dev/stderr <<-EOF
     tht           Show THT entry resulting of host-* and trust-* commands
     pub-tht       Publish THT entry according to data returned by 'trust-list' and 'host-list'
     forge-am      Forge an amendment, following currently promoted of given node.
-                  To be used in combination with -d, -m, -t, -n options.
-                  It might be given a string for members and voters changes from STDIN,
+                  To be used in combination with -d, -m, -t, -n, -C options.
+                  With -C option, a string for members and voters changes is read from STDIN,
                   with format "[+FPR_MEMBER[...]][-FPR_MEMBER2[...]][;[+FPR_VOTER1[...]][-FPR_VOTER2[...]]]".
 
 
@@ -55,6 +55,7 @@ cat > /dev/stderr <<-EOF
     -d dividend   Universal Dividend (to apply with forge-am)
     -m power10    Minimal coin 10 power (to apply with forge-am)
     -n votes      Number of required votes (to apply with forge-am)
+    -C            forge-am will read community changes from STDIN
     -c            Responds 'yes' on confirmation questions.
     -v            Verbose mode
     -h            Help
@@ -73,11 +74,12 @@ mincoin=
 votes=
 timestamp=
 confirm=true
+communityChanges=false
 verbose=false
 DEBUG=false
 comment=
 fpr=
-while getopts :hs:p:u:t:d:m:n:vDc OPT; do
+while getopts :hs:p:u:t:d:m:n:vDcC OPT; do
   case "$OPT" in
     s)
       SERVER="$OPTARG"
@@ -108,6 +110,9 @@ while getopts :hs:p:u:t:d:m:n:vDc OPT; do
       ;;
     c)
       confirm=false
+      ;;
+    C)
+      communityChanges=true
       ;;
     h)
       usage
@@ -527,7 +532,10 @@ case "$cmd" in
     ;;
 
   forge-am)
-    changes=`cat`
+    changes=""
+    if $communityChanges; then
+      changes=`cat`
+    fi
     mchanges="$changes"
     vchanges=""
     if echo "$changes" | grep ";" > /dev/null; then
