@@ -98,10 +98,10 @@ program
     }
     if(key && sign){
       node.pks.add(key, sign, proxy(function (res) {
-        var name = res.name || '';
-        var comment = res.comment ? ' (' + res.comment + ')' : '';
-        var email = res.email ? ' <' + res.email + '>' : '';
-        console.log("Posted key '" + res.fingerprint + "' of " + name + comment + email);
+        var name = res.key.name || '';
+        var comment = res.key.comment ? ' (' + res.key.comment + ')' : '';
+        var email = res.key.email ? ' <' + res.key.email + '>' : '';
+        console.log("Posted key '" + res.key.fingerprint + "' of " + name + comment + email);
       }));
     }
     else{
@@ -714,7 +714,7 @@ program
         forgedAM.dividend = program.dividend; // If no dividend, field is null hence not taken
         forgedAM.coinMinPower = program.mincoin; // Same as dividend
         forgedAM.nextVotes = program.votes;
-        forgedAM.generated = program.timestamp;
+        forgedAM.generated = program.timestamp || new Date().getTime();
         if(am.raw){
           forgedAM.previousHash = sha1(am.raw).toUpperCase();
         }
