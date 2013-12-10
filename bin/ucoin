@@ -21,7 +21,7 @@ program
   .option('--search <search>', 'Search string')
   .option('--votefile <voteFile>', 'Vote file to send.')
   .option('--coins <base,power[,...]>', 'Coins to create.', splitCoins)
-  .option('--pay <issuer,number[,...]>', 'Coins to transfert.', splitCoins2)
+  .option('--pay <issuer,number[,...]>', 'Coins to transfer.', splitCoins2)
   .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
   .option('--comment <comment>', 'Comment to add to transaction.')
@@ -363,8 +363,8 @@ program
   }));
 
 program
-  .command('transfert')
-  .description('Send transfert transaction.')
+  .command('transfer')
+  .description('Send transfer transaction.')
   .action(connect(function (node) {
     if(!program.transaction){
       console.error("Requires --transaction parameter");
@@ -372,7 +372,7 @@ program
     }
     var tx = fs.readFileSync(program.transaction, 'utf8');
     node.hdc.transactions.processs(tx, proxy(function (res) {
-      console.log("Posted transfert transaction");
+      console.log("Posted transfer transaction");
     }));
     return;
   }));
@@ -602,7 +602,7 @@ program
   }));
 
 program
-  .command('forge-transfert')
+  .command('forge-transfer')
   .description('Forge HDC issuance transaction.')
   .action(connect(function (node) {
     var tx = new hdc.Transaction();
@@ -631,7 +631,7 @@ program
         tx.currency = peering.currency;
         tx.sender = program.sender;
         tx.recipient = program.recipient;
-        tx.type = 'TRANSFERT';
+        tx.type = 'TRANSFER';
         tx.comment = program.comment ? program.comment : '';
         tx.coins = [];
         // Find last transaction
