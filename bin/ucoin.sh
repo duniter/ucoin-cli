@@ -497,7 +497,7 @@ case "$cmd" in
     if [[ ! -z $4 ]]; then
       comment="$4"
     fi
-    sign "$ucoin forge-transfer --recipient $2 --pay $3 --sender $fpr" "TRANSFERT"
+    sign "$ucoin forge-transfer --recipient $2 --pay $3 --sender $fpr" "TRANSFER"
     ;;
 
   forge-fusion)
