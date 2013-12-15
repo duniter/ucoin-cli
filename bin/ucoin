@@ -723,10 +723,10 @@ program
       function (next) {
         // Getting previous amendment members tree
         if (forgedAM.number == 0) {
-            next(null, { leaves: {} });
+            next(null, { leaves: [] });
         } else {
           node.hdc.amendments.view.members(forgedAM.number - 1, forgedAM.previousHash, {
-            extract: true
+            leaves: true
           }, next);
         }
       },
@@ -737,8 +737,8 @@ program
         var reallyAddedMembers = [];
         var reallyRemovedMembers = [];
         // Add previous members
-        _(json.leaves).values().forEach(function(item){
-          var fingerprint = item.value;
+        // console.log(json);
+        json.leaves.forEach(function(fingerprint){
           members.push(fingerprint);
           previousMembers.push(fingerprint);
         });
@@ -772,10 +772,10 @@ program
       function (next) {
         // Getting previous amendment voters tree
         if (forgedAM.number == 0) {
-            next(null, { leaves: {} });
+            next(null, { leaves: [] });
         } else {
           node.hdc.amendments.view.voters(forgedAM.number - 1, forgedAM.previousHash, {
-            extract: true
+            leaves: true
           }, next);
         }
       },
@@ -786,8 +786,7 @@ program
         var reallyAddedVoters = [];
         var reallyRemovedVoters = [];
         // Add previous voters
-        _(json.leaves).values().forEach(function(item){
-          var fingerprint = item.value;
+        json.leaves.forEach(function(fingerprint){
           voters.push(fingerprint);
           previousVoters.push(fingerprint);
         });
@@ -828,7 +827,7 @@ program
       function (json, next) {
         // Becomes votes of previous
         forgedAM.previousVotesCount = json.leavesCount;
-        forgedAM.previousVotesRoot = json.levels["0"][0];
+        forgedAM.previousVotesRoot = json.root;
         next(null);
       },
     ], function (err, result) {
