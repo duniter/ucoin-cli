@@ -140,8 +140,8 @@ program
     node.ucg.peering.get(proxy(function (res) {
       console.log("Currency: %s", res.currency);
       console.log("Public key FPR: %s", res.key);
-      console.log("Contract: %s", res.contract.currentNumber == '' ? 'none' : res.contract.currentNumber + '-' + res.contract.hash);
-      console.log("Public keys: %s", res["pks/all"].leavesCount);
+      console.log("Contract: %s", res.contract.currentNumber === '' ? 'none' : res.contract.currentNumber + '-' + res.contract.hash);
+      console.log("Public keys: %s", res.merkles["pks/all"].leavesCount);
       res.remote.host != '' && console.log("Remote host: %s", res.remote.host);
       res.remote.ipv4 != '' && console.log("Remote ipv4: %s", res.remote.ipv4);
       res.remote.ipv6 != '' && console.log("Remote ipv6: %s", res.remote.ipv6);
