@@ -196,7 +196,9 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         },
 
         of: function (amendmentNumber, amendmentHash, done) {
-          get('/hdc/amendments/votes/' + amendmentNumber + '-' + amendmentHash, done);
+          var opts = arguments.length == 3 ? {} : arguments[2];
+          var done = arguments.length == 3 ? opts : arguments[3];
+          dealMerkle('/hdc/amendments/current/votes', opts, done);
         }
       }
     },
