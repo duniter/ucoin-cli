@@ -816,20 +816,6 @@ program
         forgedAM.votersRoot = votersMerkle.root();
         next(null);
       },
-      function (next) {
-        // Signatures of current
-        if (forgedAM.number == 0) {
-            next('Does not have previous votes: we are building root amendment');
-            return;
-        }
-        node.hdc.amendments.currentVotes({}, next);
-      },
-      function (json, next) {
-        // Becomes votes of previous
-        forgedAM.previousVotesCount = json.leavesCount;
-        forgedAM.previousVotesRoot = json.root;
-        next(null);
-      },
     ], function (err, result) {
       console.log(forgedAM.getRaw());
     });
