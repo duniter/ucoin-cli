@@ -168,15 +168,18 @@ program
     function getAmendment (number, hash) {
       node.hdc.amendments.view.self(number, hash, proxy(function (res) {
         var amendment = new hdc.Amendment(res.raw);
-        console.log(res.raw);
+        console.log(res.raw + "------------------------------------");
         if(amendment.previousHash){
           getAmendment(amendment.number - 1, amendment.previousHash);
         }
       }));
     }
+    console.log("-----------------------------------");
+    console.log("-             CONTRACT            -");
+    console.log("-----------------------------------");
     node.hdc.amendments.current(proxy(function (res) {
       var amendment = new hdc.Amendment(res.raw);
-      console.log(amendment.getRaw());
+      console.log(amendment.getRaw() + "------------------------------------");
       if(amendment.previousHash){
         getAmendment(amendment.number - 1, amendment.previousHash);
       }
