@@ -188,6 +188,37 @@ program
   }));
 
 program
+  .command('members [number]')
+  .description('View members present for at given amendment number. Defaults to current amendment number.')
+  .action(connect(function (number, node) {
+    async.waterfall([
+      function (next){
+        if (number >= 0) {
+          node.hdc.amendments.promoted(number, next);
+        } else {
+          node.hdc.amendments.current(next);
+        }
+      },
+      function (json, next){
+        var amendment = new hdc.Amendment(json.raw);
+        node.hdc.amendments.view.members(amendment.number, amendment.hash, { leaves: true }, next);
+      },
+      function (json, next){
+        json.leaves.forEach(function(leaf){
+          console.log(leaf);
+        });
+        next();
+      },
+    ], function (err) {
+      if (err) {
+        console.log(err);
+        process.exit(1);
+      }
+    });
+    return;
+  }));
+
+program
   .command('tx-show-last [count]')
   .description('Show last [count] transactions (default to one).')
   .action(connect(function (count, node) {

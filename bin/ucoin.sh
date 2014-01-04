@@ -545,6 +545,10 @@ case "$cmd" in
     $ucoin forge-amendment --mchanges "\"$mchanges\"" --vchanges "\"$vchanges\""
     ;;
 
+  members)
+    $ucoin members $2
+    ;;
+
   **)
     echo "Bad command." >&2
     usage >&2
