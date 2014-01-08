@@ -748,7 +748,7 @@ program
         forgedAM.dividend = program.dividend; // If no dividend, field is null hence not taken
         forgedAM.coinMinPower = program.mincoin; // Same as dividend
         forgedAM.nextVotes = program.votes;
-        forgedAM.generated = program.timestamp || new Date().getTime();
+        forgedAM.generated = program.timestamp || (new Date().getTime()/1000).toFixed(0);
         if(am.raw){
           forgedAM.previousHash = sha1(am.raw).toUpperCase();
         }
