@@ -276,7 +276,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
           dividend: {
 
             get: function () {
-              txSenderMerkle(arguments, '/issuance/amendment');
+              txSenderMerkle(arguments, '/issuance/dividend');
             },
 
             amendment: function () {
@@ -289,12 +289,16 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
           },
 
           fusion: function () {
-            txSenderMerkle(arguments, '/issuance/amendment');
+            txSenderMerkle(arguments, '/issuance/fusion');
+          },
+
+          division: function () {
+            txSenderMerkle(arguments, '/issuance/division');
           }
         },
 
-        transfert: function () {
-          txSenderMerkle(arguments, '/issuance/transfert');
+        transfer: function () {
+          txSenderMerkle(arguments, '/transfer');
         }
       },
 
