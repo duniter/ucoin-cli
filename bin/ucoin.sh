@@ -24,6 +24,7 @@ cat > /dev/stderr <<-EOF
     issue         Issue new coins
     transfer      Transfers property of coins (coins a read from STDIN)
     fusion        Fusion coins to make a bigger coin (coins a read from STDIN)
+    divide        Divide coins to make other coins (coins a read from STDIN)
     host-add      Add given key fingerprint to hosts managing transactions of key -u
     host-rm       Same as 'host-add', but remove host instead
     trust-add     Add given key fingerprint to hosts key -u trust for receiving transactions
@@ -267,7 +268,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-issuance|forge-transfer|clist|cget|vote)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -445,6 +446,16 @@ case "$cmd" in
     rm fusion.ucoin.tmp
     ;;
   
+  divide)
+    coins=`cat`
+      $DEBUG && $ucoinsh -u $user forge-division $coins $2 > division.ucoin.tmp
+    ! $DEBUG && $ucoinsh -u $user forge-division $coins $2 > division.ucoin.tmp
+    if [ $? -eq 0 ]; then
+      $ucoin division --transaction division.ucoin.tmp
+    fi
+    rm division.ucoin.tmp
+    ;;
+  
   lookup)
     # Must have a search parameter
     if [ -z $2 ]; then
@@ -509,6 +520,17 @@ case "$cmd" in
       comment="$3"
     fi
     sign "$ucoin forge-fusion --pay $2 --sender $fpr" "FUSION"
+    ;;
+
+  forge-division)
+    if [[ -z $2 ]] || [[ -z $3 ]]; then
+      $verbose && echo "Bad command. Usage: $0 -u [user] forge-division <coin1base,coin1pow[,...]> <coin1base,coin1pow[,...]> [<multiline comment>]"
+      exit 1
+    fi
+    if [[ ! -z $4 ]]; then
+      comment="$4"
+    fi
+    sign "$ucoin forge-division --pay $2 --coins $3 --sender $fpr" "DIVISION"
     ;;
 
   forge-cert)
