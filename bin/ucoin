@@ -26,6 +26,7 @@ program
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
   .option('--comment <comment>', 'Comment to add to transaction.')
   .option('--transaction <txFile>', 'Transaction file to send.')
+  .option('--membership <msFile>', 'Membership file to send.')
   .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
   .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
   .option('-n, --votes <number>', 'Number of votes required for amendment.', parseInt)
@@ -158,6 +159,32 @@ program
       var amendment = new hdc.Amendment(res.raw);
       console.log(amendment.getRaw());
     }));
+    return;
+  }));
+
+program
+  .command('am-proposed')
+  .description('View currently proposed next amendment.')
+  .action(connect(function (node) {
+    async.waterfall([
+      function(next){
+        node.hdc.amendments.current(proxy(function (res) {
+          var amendment = new hdc.Amendment(res.raw);
+          next(null, amendment);
+        }));
+      },
+      function (current, next){
+        node.ucs.amendment.proposed(parseInt(current.number,10) + 1, next);
+      },
+    ], function (err, res) {
+      if (err) {
+        console.error(err);
+        process.exit(1);
+        return;
+      }
+      var proposed = new hdc.Amendment(res.raw);
+      console.log(proposed.getRaw());
+    });
     return;
   }));
 
@@ -452,6 +479,21 @@ program
     var vote = fs.readFileSync(program.votefile, 'utf8');
     node.hdc.amendments.votes.post(vote, proxy(function (res) {
       console.log("Posted vote for Amendment #" + res.amendment.number);
+    }));
+    return;
+  }));
+
+program
+  .command('update-membership')
+  .description('Send membership request.')
+  .action(connect(function (node) {
+    if(!program.membership){
+      console.error("Requires --membership parameter");
+      return;
+    }
+    var vote = fs.readFileSync(program.membership, 'utf8');
+    node.ucs.community.members.post(vote, proxy(function (res) {
+      console.log("Posted membership " + res.entry.membership + " for key " + res.entry.issuer);
     }));
     return;
   }));

@@ -268,7 +268,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -487,6 +487,42 @@ case "$cmd" in
   
   cget)
     $ucoin coins-get $fpr --pay $2
+    ;;
+  
+  join)
+    currency=`$ucoin currency`
+    echo "Version: 1" > join.ucoin.tmp
+    echo "Currency: $currency" >> join.ucoin.tmp
+    echo "Issuer: $fpr" >> join.ucoin.tmp
+    echo "Membership: JOIN" >> join.ucoin.tmp
+    sign "cat join.ucoin.tmp" > join.ucoin.tmp.asc
+    $ucoin update-membership --membership join.ucoin.tmp.asc
+    rm join.ucoin.tmp
+    rm join.ucoin.tmp.asc
+    ;;
+  
+  actualize)
+    currency=`$ucoin currency`
+    echo "Version: 1" > actu.ucoin.tmp
+    echo "Currency: $currency" >> actu.ucoin.tmp
+    echo "Issuer: $fpr" >> actu.ucoin.tmp
+    echo "Membership: ACTUALIZE" >> actu.ucoin.tmp
+    sign "cat actu.ucoin.tmp" > actu.ucoin.tmp.asc
+    $ucoin update-membership --membership actu.ucoin.tmp.asc
+    rm actu.ucoin.tmp
+    rm actu.ucoin.tmp.asc
+    ;;
+  
+  leave)
+    currency=`$ucoin currency`
+    echo "Version: 1" > leave.ucoin.tmp
+    echo "Currency: $currency" >> leave.ucoin.tmp
+    echo "Issuer: $fpr" >> leave.ucoin.tmp
+    echo "Membership: LEAVE" >> leave.ucoin.tmp
+    sign "cat leave.ucoin.tmp" > leave.ucoin.tmp.asc
+    $ucoin update-membership --membership leave.ucoin.tmp.asc
+    rm leave.ucoin.tmp
+    rm leave.ucoin.tmp.asc
     ;;
 
   forge-issuance)

@@ -317,7 +317,36 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         dealMerkle('/hdc/transactions/view/' + hash + '-' + number, opts, done);
       }
     }
-  }
+  };
+
+  this.ucs = {
+
+    community: {
+      
+      members: {
+
+        post: function (ms, done) {
+          var sigIndex = ms.indexOf("-----BEGIN");
+          post('/ucs/community/members', done)
+          .form({
+            "membership": ms.substring(0, sigIndex),
+            "signature": ms.substring(sigIndex)
+          });
+        }
+      }
+    },
+
+    amendment: {
+
+      proposed: function (number, done) {
+          get('/ucs/amendment/' + number, done);
+      },
+
+      vote: function (number, done) {
+          get('/ucs/amendment/' + number + '/vote', done);
+      }
+    }
+  };
 
   function txSenderMerkle (args, property) {
     var hash = args[0];
