@@ -168,13 +168,18 @@ program
   .action(connect(function (node) {
     async.waterfall([
       function(next){
-        node.hdc.amendments.current(proxy(function (res) {
-          var amendment = new hdc.Amendment(res.raw);
-          next(null, amendment);
-        }));
+        node.hdc.amendments.current(function (err, res) {
+          if (err) {
+            next(null, -1);
+            return;
+          } else {
+            var amendment = new hdc.Amendment(res.raw);
+            next(null, amendment.number);
+          }
+        });
       },
-      function (current, next){
-        node.ucs.amendment.proposed(parseInt(current.number,10) + 1, next);
+      function (nextNumber, next){
+        node.ucs.amendment.proposed(parseInt(nextNumber) + 1, next);
       },
     ], function (err, res) {
       if (err) {
