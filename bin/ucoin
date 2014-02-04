@@ -27,6 +27,7 @@ program
   .option('--comment <comment>', 'Comment to add to transaction.')
   .option('--transaction <txFile>', 'Transaction file to send.')
   .option('--membership <msFile>', 'Membership file to send.')
+  .option('--voting <votingFile>', 'Voting file to send.')
   .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
   .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
   .option('-n, --votes <number>', 'Number of votes required for amendment.', parseInt)
@@ -499,6 +500,21 @@ program
     var vote = fs.readFileSync(program.membership, 'utf8');
     node.ucs.community.members.post(vote, proxy(function (res) {
       console.log("Posted membership " + res.entry.membership + " for key " + res.entry.issuer);
+    }));
+    return;
+  }));
+
+program
+  .command('update-voting')
+  .description('Send voting request.')
+  .action(connect(function (node) {
+    if(!program.voting){
+      console.error("Requires --voting parameter");
+      return;
+    }
+    var vote = fs.readFileSync(program.voting, 'utf8');
+    node.ucs.community.voters.post(vote, proxy(function (res) {
+      console.log("Posted voting key " + res.entry.votingKey + " for member " + res.entry.issuer);
     }));
     return;
   }));

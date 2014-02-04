@@ -333,6 +333,18 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
             "signature": ms.substring(sigIndex)
           });
         }
+      },
+      
+      voters: {
+
+        post: function (voting, done) {
+          var sigIndex = voting.indexOf("-----BEGIN");
+          post('/ucs/community/voters', done)
+          .form({
+            "voting": voting.substring(0, sigIndex),
+            "signature": voting.substring(sigIndex)
+          });
+        }
       }
     },
 

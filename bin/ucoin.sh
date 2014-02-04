@@ -268,7 +268,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|set-voting)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -495,6 +495,7 @@ case "$cmd" in
     echo "Currency: $currency" >> join.ucoin.tmp
     echo "Issuer: $fpr" >> join.ucoin.tmp
     echo "Membership: JOIN" >> join.ucoin.tmp
+    cat join.ucoin.tmp
     sign "cat join.ucoin.tmp" > join.ucoin.tmp.asc
     $ucoin update-membership --membership join.ucoin.tmp.asc
     rm join.ucoin.tmp
@@ -523,6 +524,22 @@ case "$cmd" in
     $ucoin update-membership --membership leave.ucoin.tmp.asc
     rm leave.ucoin.tmp
     rm leave.ucoin.tmp.asc
+    ;;
+  
+  set-voting)
+    currency=`$ucoin currency`
+    key=$2
+    if [[ -z $key ]]; then
+      key=$fpr
+    fi
+    echo "Version: 1" > voting.ucoin.tmp
+    echo "Currency: $currency" >> voting.ucoin.tmp
+    echo "Issuer: $fpr" >> voting.ucoin.tmp
+    echo "VotingKey: $key" >> voting.ucoin.tmp
+    sign "cat voting.ucoin.tmp" > voting.ucoin.tmp.asc
+    $ucoin update-voting --voting voting.ucoin.tmp.asc
+    rm voting.ucoin.tmp
+    rm voting.ucoin.tmp.asc
     ;;
 
   forge-issuance)
