@@ -499,7 +499,7 @@ program
     }
     var vote = fs.readFileSync(program.membership, 'utf8');
     node.ucs.community.members.post(vote, proxy(function (res) {
-      console.log("Posted membership " + res.entry.membership + " for key " + res.entry.issuer);
+      console.log("Posted membership " + res.membership.membership + " for key " + res.membership.issuer);
     }));
     return;
   }));
@@ -514,7 +514,7 @@ program
     }
     var vote = fs.readFileSync(program.voting, 'utf8');
     node.ucs.community.voters.post(vote, proxy(function (res) {
-      console.log("Posted voting key " + res.entry.votingKey + " for member " + res.entry.issuer);
+      console.log("Posted voting key " + res.voting.votingKey + " for member " + res.voting.issuer);
     }));
     return;
   }));
