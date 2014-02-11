@@ -268,7 +268,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|set-voting)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|set-voting|vote-proposed)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -374,6 +374,31 @@ case "$cmd" in
       echo "Parameter must be a readable file" >&2
       exit 1
     fi
+    echo "------------------------"
+    echo "Amendment to sign:"
+    echo "------------------------"
+    echo "$amendment"
+    echo "------------------------"
+    echo "$amendment" > am.ucoin.tmp
+    if ! $confirm || confirmThat "You are about to vote for this amendment by signing and sending it. Do wish to continue? [y/n] "; then
+      echo "Signing amendment..."
+      sign "cat am.ucoin.tmp"  > vote.ucoin.tmp
+      $ucoinsh send-vote vote.ucoin.tmp
+    else
+      echo "Aborting..."
+    fi
+    if [[ -e am.ucoin.tmp ]]; then
+      rm am.ucoin.tmp
+    fi
+    if [[ -e vote.ucoin.tmp ]]; then
+      rm vote.ucoin.tmp
+    fi
+    ;;
+  
+  vote-proposed)
+    $ucoin am-proposed > am.ucoin.tmp
+    amendment=`cat am.ucoin.tmp`
+    rm am.ucoin.tmp
     echo "------------------------"
     echo "Amendment to sign:"
     echo "------------------------"
