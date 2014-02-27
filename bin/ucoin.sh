@@ -9,7 +9,7 @@ cat > /dev/stderr <<-EOF
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] cget <value1[,...]>
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] issue <#amendment> <coins> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] transfer <recipient> [<comment>]
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] fusion [<comment>]
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] change <coins> [<comment>]
 
   Forge and send HDC documents to a uCoin server.
 
@@ -23,8 +23,7 @@ cat > /dev/stderr <<-EOF
     index         List reiceved votes count for each amendment
     issue         Issue new coins
     transfer      Transfers property of coins (coins a read from STDIN)
-    fusion        Fusion coins to make a bigger coin (coins a read from STDIN)
-    divide        Divide coins to make other coins (coins a read from STDIN)
+    change        Change coins to make other coins (coins a read from STDIN)
     host-add      Add given key fingerprint to hosts managing transactions of key -u
     host-rm       Same as 'host-add', but remove host instead
     trust-add     Add given key fingerprint to hosts key -u trust for receiving transactions
@@ -268,7 +267,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-fusion|forge-division|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|set-voting|vote-proposed|vote-proposed|vote-current)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-change|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|set-voting|vote-proposed|vote-proposed|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -486,24 +485,14 @@ case "$cmd" in
     rm transfer.ucoin.tmp
     ;;
   
-  fusion)
+  change)
     coins=`cat`
-      $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
-    ! $DEBUG && $ucoinsh -u $user forge-fusion $coins $2 > fusion.ucoin.tmp
+      $DEBUG && $ucoinsh -u $user forge-change $coins $2 > change.ucoin.tmp
+    ! $DEBUG && $ucoinsh -u $user forge-change $coins $2 > change.ucoin.tmp
     if [ $? -eq 0 ]; then
-      $ucoin fusion --transaction fusion.ucoin.tmp
+      $ucoin change --transaction change.ucoin.tmp
     fi
-    rm fusion.ucoin.tmp
-    ;;
-  
-  divide)
-    coins=`cat`
-      $DEBUG && $ucoinsh -u $user forge-division $coins $2 > division.ucoin.tmp
-    ! $DEBUG && $ucoinsh -u $user forge-division $coins $2 > division.ucoin.tmp
-    if [ $? -eq 0 ]; then
-      $ucoin division --transaction division.ucoin.tmp
-    fi
-    rm division.ucoin.tmp
+    rm change.ucoin.tmp
     ;;
   
   lookup)
@@ -614,26 +603,15 @@ case "$cmd" in
     sign "$ucoin forge-transfer --recipient $2 --pay $3 --sender $fpr" "TRANSFER"
     ;;
 
-  forge-fusion)
-    if [[ -z $2 ]]; then
-      $verbose && echo "Bad command. Usage: $0 -u [user] forge-fusion <coin1base,coin1pow[,...]> [<multiline comment>]"
-      exit 1
-    fi
-    if [[ ! -z $3 ]]; then
-      comment="$3"
-    fi
-    sign "$ucoin forge-fusion --pay $2 --sender $fpr" "FUSION"
-    ;;
-
-  forge-division)
+  forge-change)
     if [[ -z $2 ]] || [[ -z $3 ]]; then
-      $verbose && echo "Bad command. Usage: $0 -u [user] forge-division <coin1base,coin1pow[,...]> <coin1base,coin1pow[,...]> [<multiline comment>]"
+      $verbose && echo "Bad command. Usage: $0 -u [user] forge-change <coin1base,coin1pow[,...]> <coin1base,coin1pow[,...]> [<multiline comment>]"
       exit 1
     fi
     if [[ ! -z $4 ]]; then
       comment="$4"
     fi
-    sign "$ucoin forge-division --pay $2 --coins $3 --sender $fpr" "DIVISION"
+    sign "$ucoin forge-change --pay $2 --coins $3 --sender $fpr" "CHANGE"
     ;;
 
   forge-cert)

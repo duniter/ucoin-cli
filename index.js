@@ -60,10 +60,6 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         get('/ucg/peering', done);
       },
 
-      peer: function (done) {
-        get('/ucg/peering/peer', done);
-      },
-
       peers: {
 
         get: function (done) {
@@ -95,12 +91,12 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         }
       },
 
-      subscribe: function (subscription, done) {
-        var sigIndex = subscription.indexOf("-----BEGIN");
-        post('/ucg/peering/subscribe', done)
+      forward: function (forward, done) {
+        var sigIndex = forward.indexOf("-----BEGIN");
+        post('/ucg/peering/forward', done)
         .form({
-          "subscription": subscription.substring(0, sigIndex),
-          "signature": subscription.substring(sigIndex)
+          "forward": forward.substring(0, sigIndex),
+          "signature": forward.substring(sigIndex)
         });
       },
 
@@ -111,12 +107,6 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
           "status": status.substring(0, sigIndex),
           "signature": status.substring(sigIndex)
         });
-      },
-
-      keys: function (done) {
-        var opts = arguments.length == 1 ? {} : arguments[0];
-        var done = arguments.length == 1 ? arguments[0] : arguments[1];
-        dealMerkle('/ucg/peering/keys', opts, done);
       }
     },
 
@@ -148,13 +138,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     amendments: {
 
       current: function (done) {
-        get('/hdc/amendments/current', done);
-      },
-
-      currentVotes: function (opts, done) {
-        var opts = arguments.length == 1 ? {} : arguments[0];
-        var done = arguments.length == 1 ? opts : arguments[1];
-        dealMerkle('/hdc/amendments/current/votes', opts, done);
+        get('/hdc/amendments/promoted', done);
       },
 
       promoted: function (number, done) {
@@ -165,14 +149,6 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
         self: function (number, hash, done) {
           get('/hdc/amendments/view/' + number + '-' + hash + '/self', done);
-        },
-
-        members: function (number, hash, opts, done) {
-          amMerkle(arguments, 'members', opts, done);
-        },
-
-        voters: function (number, hash, done) {
-          amMerkle(arguments, 'voters', done);
         },
 
         signatures: function (number, hash, done) {
@@ -193,17 +169,15 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
             "amendment": vote.substring(0, sigIndex),
             "signature": vote.substring(sigIndex)
           });
-        },
-
-        of: function (amendmentNumber, amendmentHash, done) {
-          var opts = arguments.length == 3 ? {} : arguments[2];
-          var done = arguments.length == 3 ? opts : arguments[3];
-          dealMerkle('/hdc/amendments/current/votes', opts, done);
         }
       }
     },
 
     coins: {
+
+      last: function (fingerprint, done) {
+        get('/hdc/coins/' + fingerprint + '/last', done);
+      },
 
       list: function (fingerprint, done) {
         get('/hdc/coins/' + fingerprint + '/list', done);
@@ -220,20 +194,8 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
     transactions: {
 
-      all: function () {
-        var opts = arguments.length == 1 ? {} : arguments[0];
-        var done = arguments.length == 1 ? arguments[0] : arguments[1];
-        dealMerkle('/transactions/all', opts, done);
-      },
-
-      keys: function () {
-        var opts = arguments.length == 1 ? {} : arguments[0];
-        var done = arguments.length == 1 ? arguments[0] : arguments[1];
-        dealMerkle('/transactions/keys', opts, done);
-      },
-
       last: function (done) {
-        get('/hdc/transactions/last', done);
+        get('/hdc/transactions/last/1', done);
       },
 
       lasts: function (number, done) {
@@ -256,49 +218,17 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         },
 
         last: function (fingerprint, done) {
-          get('/hdc/transactions/sender/' + fingerprint + '/last', done);
+          get('/hdc/transactions/sender/' + fingerprint + '/last/1', function (err, json) {
+            done(err, err || json.transactions.length == 0 ? null : json.transactions[0]);
+          });
         },
 
         lasts: function (fingerprint, number, done) {
           get('/hdc/transactions/sender/' + fingerprint + '/last/' + number, done);
         },
 
-        issuance: {
-
-          get: function () {
-            txSenderMerkle(arguments, '/issuance');
-          },
-
-          last: function (fingerprint, done) {
-            get('/hdc/transactions/sender/' + fingerprint + '/issuance/last', done);
-          },
-
-          dividend: {
-
-            get: function () {
-              txSenderMerkle(arguments, '/issuance/dividend');
-            },
-
-            amendment: function () {
-              var hash = arguments[0];
-              var number = arguments[1];
-              var opts = arguments.length == 3 ? {} : arguments[2];
-              var done = arguments.length == 3 ? arguments[2] : arguments[3];
-              dealMerkle('/hdc/transactions/sender/' + hash + '/issuance/dividend/' + number, opts, done);
-            }
-          },
-
-          fusion: function () {
-            txSenderMerkle(arguments, '/issuance/fusion');
-          },
-
-          division: function () {
-            txSenderMerkle(arguments, '/issuance/division');
-          }
-        },
-
-        transfer: function () {
-          txSenderMerkle(arguments, '/transfer');
+        ud: function (fingerprint, amNumber, done) {
+          get('/hdc/transactions/sender/' + fingerprint + '/ud/' + amNumber, done);
         }
       },
 
@@ -312,9 +242,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       view: function () {
         var hash = arguments[0];
         var number = arguments[1];
-        var opts = arguments.length == 3 ? {} : arguments[2];
-        var done = arguments.length == 3 ? arguments[2] : arguments[3];
-        dealMerkle('/hdc/transactions/view/' + hash + '-' + number, opts, done);
+        get('/hdc/transactions/sender/' + hash + '/view/' + number, done);
       }
     }
   };
