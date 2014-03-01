@@ -249,6 +249,10 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   this.ucs = {
 
+    parameters: function (done) {
+      get('/ucs/parameters', done);
+    },
+
     community: {
       
       members: {
