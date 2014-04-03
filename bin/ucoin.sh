@@ -4,58 +4,58 @@ usage()
 {
 cat > /dev/stderr <<-EOF
 
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] command
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] <command>
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] join|actualize|leave
+  usage: $0 [-s server] [-p port] [-u pgpuser] [options] voter
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] clist [limit]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] cget <value1[,...]>
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] issue <#amendment> <coins> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] transfer <recipient> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] change <coins> [<comment>]
 
-  Forge and send HDC documents to a uCoin server.
+  Forge and send uCoin documents to a uCoin server.
 
-  Commands:
+  Free commands:
 
-    current       Show current amendment of the contract
-    contract      List all amendments constituting the contract
-    lookup        Search for a public key
-    peering       Show peering informations
-    pubkey        Show pubkey of remote node
-    index         List reiceved votes count for each amendment
-    issue         Issue new coins
-    transfer      Transfers property of coins (coins a read from STDIN)
-    change        Change coins to make other coins (coins a read from STDIN)
-    host-add      Add given key fingerprint to hosts managing transactions of key -u
-    host-rm       Same as 'host-add', but remove host instead
-    trust-add     Add given key fingerprint to hosts key -u trust for receiving transactions
-    trust-rm      Same as 'trust-add', but remove host instead
-    tht           Show THT entry resulting of host-* and trust-* commands
-    pub-tht       Publish THT entry according to data returned by 'trust-list' and 'host-list'
-    forge-am      Forge an amendment, following currently promoted of given node.
-                  To be used in combination with -d, -m, -t, -n, -C options.
-                  With -C option, a string for members and voters changes is read from STDIN,
-                  with format "[+FPR_MEMBER[...]][-FPR_MEMBER2[...]][;[+FPR_VOTER1[...]][-FPR_VOTER2[...]]]".
+    peering         Show peering informations
+    pubkey          Show pubkey of remote node
+    current         Show current amendment of the contract
+    contract        List all amendments constituting the contract
+    lookup          Search for a public key
+    index           List reiceved votes count for each amendment
 
+  Requiring -u option:
 
-    clist               List coins of given user. May be limited by upper amount.
-    cget                Get coins for given values in user account.
+    vote-current    Send a vote for currently promoted amendment
+    vote-proposed   Send a vote for currently proposed amendment
 
-    send-pubkey [file]  Send signed public key [file] to a uCoin server.
-                        If -u option is provided, [file] is ommited.
-                        If [file] is not provided, it is read from STDIN.
-                        Note: [file] may be forged using 'forge-*' commands.
+    host-(add|rm)   (Add|Remove) given key fingerprint to hosts managing transactions of key -u
+    trust-(add|rm)  (Add|Remove) given key fingerprint to hosts key -u trust for receiving transactions
+    tht             Show THT entry resulting of host-* and trust-* commands
+    pub-tht         Publish THT entry according to data returned by 'trust-list' and 'host-list'
 
-    vote        [file]  Signs given amendment [file] and sends it to a uCoin server.
-                        If [file] is not provided, it is read from STDIN.
+    issue           Issue new coins
+    transfer        Transfers property of coins (coins are read from STDIN)
+    change          Change coins to make other coins (coins are read from STDIN)
+    clist           List coins of given user. May be limited by upper amount.
+    cget            Get coins for given values in user account.
+
+    send-pubkey     Send signed public key [file] to a uCoin server.
+                    If -u option is provided, [file] is ommited.
+                    If [file] is not provided, it is read from STDIN.
+                    Note: [file] may be forged using 'forge-*' commands.
+
+    join            Send membership request to either join, stay in, or leave the community.
+    actualize
+    leave         
+    
+    voter           Send a voting request to be taken in account as new voter.
 
   Options:
+
     -s server     uCoin server to look data in [default 'localhost']
     -p port       uCoin server port [default '8081']
     -u user       PGP key to use for signature
-    -t timestamp  Generation timestamp (to apply with forge-am)
-    -d dividend   Universal Dividend (to apply with forge-am)
-    -m power10    Minimal coin 10 power (to apply with forge-am)
-    -n votes      Number of required votes (to apply with forge-am)
-    -C            forge-am will read community changes from STDIN
     -c            Responds 'yes' on confirmation questions.
     -v            Verbose mode
     -h            Help
@@ -267,7 +267,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-change|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|set-voting|vote-proposed|vote-proposed|vote-current)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-change|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -532,8 +532,9 @@ case "$cmd" in
     currency=`$ucoin currency`
     echo "Version: 1" > join.ucoin.tmp
     echo "Currency: $currency" >> join.ucoin.tmp
+    echo "Registry: MEMBERSHIP" >> join.ucoin.tmp
     echo "Issuer: $fpr" >> join.ucoin.tmp
-    echo "Membership: JOIN" >> join.ucoin.tmp
+    echo "Membership: IN" >> join.ucoin.tmp
     cat join.ucoin.tmp
     sign "cat join.ucoin.tmp" > join.ucoin.tmp.asc
     $ucoin update-membership --membership join.ucoin.tmp.asc
@@ -545,8 +546,9 @@ case "$cmd" in
     currency=`$ucoin currency`
     echo "Version: 1" > actu.ucoin.tmp
     echo "Currency: $currency" >> actu.ucoin.tmp
+    echo "Registry: MEMBERSHIP" >> actu.ucoin.tmp
     echo "Issuer: $fpr" >> actu.ucoin.tmp
-    echo "Membership: ACTUALIZE" >> actu.ucoin.tmp
+    echo "Membership: IN" >> actu.ucoin.tmp
     sign "cat actu.ucoin.tmp" > actu.ucoin.tmp.asc
     $ucoin update-membership --membership actu.ucoin.tmp.asc
     rm actu.ucoin.tmp
@@ -557,15 +559,16 @@ case "$cmd" in
     currency=`$ucoin currency`
     echo "Version: 1" > leave.ucoin.tmp
     echo "Currency: $currency" >> leave.ucoin.tmp
+    echo "Registry: MEMBERSHIP" >> leave.ucoin.tmp
     echo "Issuer: $fpr" >> leave.ucoin.tmp
-    echo "Membership: LEAVE" >> leave.ucoin.tmp
+    echo "Membership: OUT" >> leave.ucoin.tmp
     sign "cat leave.ucoin.tmp" > leave.ucoin.tmp.asc
     $ucoin update-membership --membership leave.ucoin.tmp.asc
     rm leave.ucoin.tmp
     rm leave.ucoin.tmp.asc
     ;;
   
-  set-voting)
+  voter)
     currency=`$ucoin currency`
     key=$2
     if [[ -z $key ]]; then
@@ -573,8 +576,8 @@ case "$cmd" in
     fi
     echo "Version: 1" > voting.ucoin.tmp
     echo "Currency: $currency" >> voting.ucoin.tmp
+    echo "Registry: VOTING" >> voting.ucoin.tmp
     echo "Issuer: $fpr" >> voting.ucoin.tmp
-    echo "VotingKey: $key" >> voting.ucoin.tmp
     sign "cat voting.ucoin.tmp" > voting.ucoin.tmp.asc
     $ucoin update-voting --voting voting.ucoin.tmp.asc
     rm voting.ucoin.tmp
