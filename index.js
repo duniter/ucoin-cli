@@ -51,13 +51,13 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   this.ucg = {
 
     pubkey: function (done) {
-      get('/ucg/pubkey', done);
+      get('/network/pubkey', done);
     },
 
     peering: {
 
       get: function (done) {
-        get('/ucg/peering', done);
+        get('/network/peering', done);
       },
 
       peers: {
@@ -65,35 +65,35 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         get: function (done) {
           var opts = arguments.length == 1 ? {} : arguments[0];
           var done = arguments.length == 1 ? arguments[0] : arguments[1];
-          dealMerkle('/ucg/peering/peers', opts, done);
+          dealMerkle('/network/peering/peers', opts, done);
         },
 
         upstream: {
           
           get: function (done) {
-            get('/ucg/peering/peers/upstream', done);
+            get('/network/peering/peers/upstream', done);
           },
           
           of: function (fingerprint, done) {
-            get('/ucg/peering/peers/upstream/' + fingerprint, done);
+            get('/network/peering/peers/upstream/' + fingerprint, done);
           },
         },
 
         downstream: {
           
           get: function (done) {
-            get('/ucg/peering/peers/downstream', done);
+            get('/network/peering/peers/downstream', done);
           },
           
           of: function (fingerprint, done) {
-            get('/ucg/peering/peers/downstream/' + fingerprint, done);
+            get('/network/peering/peers/downstream/' + fingerprint, done);
           },
         }
       },
 
       forward: function (forward, done) {
         var sigIndex = forward.indexOf("-----BEGIN");
-        post('/ucg/peering/forward', done)
+        post('/network/peering/forward', done)
         .form({
           "forward": forward.substring(0, sigIndex),
           "signature": forward.substring(sigIndex)
@@ -102,7 +102,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
       status: function (status, done) {
         var sigIndex = status.indexOf("-----BEGIN");
-        post('/ucg/peering/status', done)
+        post('/network/peering/status', done)
         .form({
           "status": status.substring(0, sigIndex),
           "signature": status.substring(sigIndex)
@@ -115,12 +115,12 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       get: function (done) {
         var opts = arguments.length == 1 ? {} : arguments[0];
         var done = arguments.length == 1 ? arguments[0] : arguments[1];
-        dealMerkle('/ucg/tht', opts, done);
+        dealMerkle('/network/tht', opts, done);
       },
 
       post: function (entry, done) {
         var sigIndex = entry.indexOf("-----BEGIN");
-        post('/ucg/tht', done)
+        post('/network/tht', done)
         .form({
           "entry": entry.substring(0, sigIndex),
           "signature": entry.substring(sigIndex)
@@ -128,7 +128,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       },
 
       of: function (fingerprint, done) {
-        get('/ucg/tht/' + fingerprint, done);
+        get('/network/tht/' + fingerprint, done);
       }
     }
   }
@@ -250,32 +250,60 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   this.ucs = {
 
     parameters: function (done) {
-      get('/ucs/parameters', done);
+      get('/registry/parameters', done);
     },
 
     community: {
       
       members: {
 
+        get: function (ms, done) {
+          var opts = arguments.length == 1 ? {} : arguments[0];
+          var done = arguments.length == 1 ? arguments[0] : arguments[1];
+          dealMerkle('/registry/community/members', opts, done);
+        },
+
         post: function (ms, done) {
           var sigIndex = ms.indexOf("-----BEGIN");
-          post('/ucs/community/members', done)
+          post('/registry/community/members', done)
           .form({
             "membership": ms.substring(0, sigIndex),
             "signature": ms.substring(sigIndex)
           });
+        },
+
+        current: function (fingerprint, done) {
+          get('/registry/community/members/' + fingerprint + '/membership/current', done);
+        },
+
+        history: function (fingerprint, done) {
+          get('/registry/community/members/' + fingerprint + '/membership/history', done);
         }
       },
       
       voters: {
 
+        get: function (ms, done) {
+          var opts = arguments.length == 1 ? {} : arguments[0];
+          var done = arguments.length == 1 ? arguments[0] : arguments[1];
+          dealMerkle('/registry/community/voters', opts, done);
+        },
+
         post: function (voting, done) {
           var sigIndex = voting.indexOf("-----BEGIN");
-          post('/ucs/community/voters', done)
+          post('/registry/community/voters', done)
           .form({
             "voting": voting.substring(0, sigIndex),
             "signature": voting.substring(sigIndex)
           });
+        },
+
+        current: function (fingerprint, done) {
+          get('/registry/community/voters/' + fingerprint + '/voting/current', done);
+        },
+
+        history: function (fingerprint, done) {
+          get('/registry/community/voters/' + fingerprint + '/voting/history', done);
         }
       }
     },
@@ -283,11 +311,11 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     amendment: {
 
       proposed: function (number, done) {
-          get('/ucs/amendment/' + number, done);
+          get('/registry/amendment/' + number, done);
       },
 
       vote: function (number, done) {
-          get('/ucs/amendment/' + number + '/vote', done);
+          get('/registry/amendment/' + number + '/vote', done);
       }
     }
   };
@@ -365,7 +393,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   if(authenticated){
     var that = this;
     if(typeof authenticated != "string"){
-      require('request')('http://' + server() + '/ucg/pubkey', function (err, res, body) {
+      require('request')('http://' + server() + '/network/pubkey', function (err, res, body) {
         try{
           if(err)
             throw new Error(err);
