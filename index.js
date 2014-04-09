@@ -273,11 +273,11 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         },
 
         current: function (fingerprint, done) {
-          get('/registry/community/members/' + fingerprint + '/membership/current', done);
+          get('/registry/community/members/' + fingerprint + '/current', done);
         },
 
         history: function (fingerprint, done) {
-          get('/registry/community/members/' + fingerprint + '/membership/history', done);
+          get('/registry/community/members/' + fingerprint + '/history', done);
         }
       },
       
@@ -299,11 +299,11 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         },
 
         current: function (fingerprint, done) {
-          get('/registry/community/voters/' + fingerprint + '/voting/current', done);
+          get('/registry/community/voters/' + fingerprint + '/current', done);
         },
 
         history: function (fingerprint, done) {
-          get('/registry/community/voters/' + fingerprint + '/voting/history', done);
+          get('/registry/community/voters/' + fingerprint + '/history', done);
         }
       }
     },
