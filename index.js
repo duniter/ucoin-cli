@@ -175,20 +175,16 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
     coins: {
 
-      last: function (fingerprint, done) {
-        get('/hdc/coins/' + fingerprint + '/last', done);
-      },
-
       list: function (fingerprint, done) {
-        get('/hdc/coins/' + fingerprint + '/list', done);
+        get('/hdc/coins/list/' + fingerprint, done);
       },
 
-      view: function (fingerprint, coinNumber, done) {
-        get('/hdc/coins/' + fingerprint + '/view/' + coinNumber, done);
+      owner: function (fingerprint, amNumber, coinNumber, done) {
+        get('/hdc/coins/view/' + [fingerprint, amNumber, coinNumber].join('-') + '/owner', done);
       },
 
-      history: function (fingerprint, coinNumber, done) {
-        get('/hdc/coins/' + fingerprint + '/view/' + coinNumber + '/history', done);
+      history: function (fingerprint, amNumber, coinNumber, done) {
+        get('/hdc/coins/view/' + [fingerprint, amNumber, coinNumber].join('-') + '/history', done);
       }
     },
 

@@ -299,53 +299,53 @@ program
   }));
 
 program
-  .command('coins-list [owner] [upperlimit]')
-  .description('Show coins of given owner, whose value is under [upperlimit].')
-  .action(connect(function (owner, upperlimit, node) {
+  .command('coins-list [owner]')
+  .description('Show coins of given owner.')
+  .action(connect(function (owner, node) {
     if(!owner){
       console.error('owner is required');
       return;
     }
-    upperlimit = upperlimit ? parseInt(upperlimit) : null;
     var coins = {};
+    var amendments = {};
     node.hdc.coins.list(owner, proxy(function (res) {
       var sum = 0;
-      res.coins.forEach(function (issued) {
-        issued.ids.forEach(function (id) {
-          var tx = new hdc.Transaction();
-          tx.coins = [];
-          tx.coins.push(issued.issuer + '-' + id);
-          var c = tx.getCoins()[0];
-          var amount = c.base * Math.pow(10, c.power);
-          if(!upperlimit || upperlimit >= amount){
+      async.forEachSeries(res.coins, function(coinId, callback){
+        var c = coinId.coin();
+        getAmendment(amendments, c, node, function (err, amount) {
+          if (!err) {
+            // Coins per value
             coins[amount] = coins[amount] || [];
             coins[amount].push(c);
             sum += amount;
           }
+          callback(err);
         });
-      });
-      console.log("Credit: " + sum);
-      console.log("-------------------");
-      var table = new Table({
-        head: ['Value', 'Issuer', '#'],
-        colWidths: [Math.min(6, (""+sum).length + 5), 41, 10],
-        chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
-             , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
-             , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
-             , 'right': '' , 'right-mid': '' , 'middle': '' },
-        style: { 'padding-left': 0, 'padding-right': 0, compact : true }
-      });
+      }, function(err){
+        if (err) {
+          console.error(err);
+          return;
+        }
+        console.log("Credit: " + sum);
+        console.log("-------------------");
+        var table = new Table({
+          head: ['Value', 'Quantity', ''],
+          colWidths: [Math.min(6, (""+sum).length + 5), 41, 10],
+          chars: {'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+               , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+               , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
+               , 'right': '' , 'right-mid': '' , 'middle': '' },
+          style: { 'padding-left': 0, 'padding-right': 0, compact : true }
+        });
 
-      var keys = _(coins).keys();
-      keys.sort().reverse();
-      keys.forEach(function (key) {
-        coins[key].forEach(function (coin) {
-          table.push([key, coin.issuer, coin.number]);
+        var keys = _(coins).keys();
+        keys.sort().reverse();
+        keys.forEach(function (amount) {
+          table.push([amount, coins[amount].length]);
         });
+        console.log(table.toString());
       });
-      console.log(table.toString());
     }));
-    return;
   }));
 
 program
@@ -361,52 +361,62 @@ program
       return;
     }
     var coins = {};
+    var amendments = {};
     node.hdc.coins.list(owner, proxy(function (res) {
-      res.coins.forEach(function (issued) {
-        issued.ids.forEach(function (id) {
-          var tx = new hdc.Transaction();
-          tx.coins = [];
-          tx.coins.push(issued.issuer + '-' + id);
-          var c = tx.getCoins()[0];
-          var amount = c.base * Math.pow(10, c.power);
-          coins[amount] = coins[amount] || [];
-          coins[amount].push(c);
+      async.forEachSeries(res.coins, function (id, callback) {
+        var tx = new hdc.Transaction();
+        tx.coins = [];
+        tx.coins.push(id);
+        var c = tx.getCoins()[0];
+        getAmendment(amendments, c, node, function (err, amount) {
+          if (!err) {
+            // Coins per value
+            coins[amount] = coins[amount] || [];
+            coins[amount].push(c);
+          }
+          callback(err);
         });
-      });
+      }, function (err) {
 
-      var get = {};
-      var err = null;
-      program.pay.forEach(function (coin) {
-        var amount = coin.number; // This is bad name
-        amount = parseInt(amount);
-        if(coins[amount] && coins[amount].length > 0){
-          var c = coins[amount][0];
-          get[c.issuer] = get[c.issuer] || [];
-          get[c.issuer].push(c);
-          coins[amount].splice(0,1); // No more available
-        }
-        else{
-          err = 'You do not have enough coins of value (' + amount + ')';
+        if(err){
+          console.error(err);
           return;
         }
-      });
 
-      if(err){
-        console.error(err);
-        return;
-      }
-
-      var keys = _(get).keys();
-      var str = '';
-      keys.sort().reverse();
-      keys.forEach(function (key) {
-        str += str == '' ? '' : ',';
-        str += key;
-        get[key].forEach(function (coin) {
-          str += ':' + coin.number;
+        var get = {};
+        var err = null;
+        program.pay.forEach(function (coin) {
+          var amount = coin.number; // This is bad name
+          amount = parseInt(amount);
+          if(coins[amount] && coins[amount].length > 0){
+            var c = coins[amount][0];
+            get[c.issuer] = get[c.issuer] || [];
+            get[c.issuer].push(c);
+            coins[amount].splice(0,1); // No more available
+          }
+          else{
+            err = 'You do not have enough coins of value (' + amount + ')';
+            return;
+          }
         });
+
+        if(err){
+          console.error(err);
+          return;
+        }
+
+        var keys = _(get).keys();
+        var str = '';
+        keys.sort().reverse();
+        keys.forEach(function (key) {
+          str += str == '' ? '' : ',';
+          str += key;
+          get[key].forEach(function (coin) {
+            str += ':' + [coin.amNumber, coin.coinNumber].join('-');
+          });
+        });
+        console.log(str);
       });
-      console.log(str);
     }));
     return;
   }));
@@ -1076,6 +1086,37 @@ function withoutPlusOrMinus(item){
   return item.substr(1);
 }
 
+function getAmendment (amendments, c, node, done) {
+  async.waterfall([
+    function (next){
+      if (amendments[c.amNumber]) {
+        next(null, amendments[c.amNumber]);
+      } else {
+        node.hdc.amendments.promoted(c.amNumber, proxy(function (res) {
+          amendments[c.amNumber] = res;
+          next(null, amendments[c.amNumber]);
+        }));
+      }
+    },
+    function (am, next){
+      done(null, coinValue(c.coinNumber, am));
+    },
+  ], done);
+}
+
+function coinValue (coinNumber, am) {
+  var power = am.coinBase;
+  var decr = coinNumber;
+  am.coinList.forEach(function(quantity){
+    if (decr <= quantity) {
+      return;
+    }
+    decr -= quantity;
+    power++;
+  });
+  return Math.pow(2, power);
+}
+
 String.prototype.trim = function(){
   return this.replace(/^\s+|\s+$/g, '');
 };
@@ -1089,19 +1130,15 @@ String.prototype.dos2unix = function(){
 };
 
 String.prototype.coin = function(){
-  var matches = this.match(/([A-Z\d]{40})-(\d+)-(\d)-(\d+)-(A|C)-(\d+)(, ([A-Z\d]{40})-(\d+))?/);
-  if(matches && matches.length == 10){
+  var matches = this.match(/([A-Z\d]{40})-(\d+)-(\d+)(:([A-Z\d]{40})-(\d+))?/);
+  if(matches && matches.length == 7){
     return {
-      id: matches[0],
       issuer: matches[1],
-      number: parseInt(matches[2], 10),
-      base: parseInt(matches[3], 10),
-      power: parseInt(matches[4], 10),
-      originType: matches[5],
-      originNumber: matches[6],
-      transaction: matches[7] && {
-        sender: matches[8],
-        number: matches[9]
+      amNumber: parseInt(matches[2], 10),
+      coinNumber: parseInt(matches[3], 10),
+      transaction: matches[4] && {
+        sender: matches[5],
+        number: matches[6]
       }
     };
   } else {
