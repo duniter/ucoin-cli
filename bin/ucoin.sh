@@ -9,9 +9,7 @@ cat > /dev/stderr <<-EOF
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] voter
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] clist [limit]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] cget <value1[,...]>
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] issue <#amendment> <coins> [<comment>]
   usage: $0 [-s server] [-p port] [-u pgpuser] [options] transfer <recipient> [<comment>]
-  usage: $0 [-s server] [-p port] [-u pgpuser] [options] change <coins> [<comment>]
 
   Forge and send uCoin documents to a uCoin server.
 
@@ -34,9 +32,7 @@ cat > /dev/stderr <<-EOF
     tht             Show THT entry resulting of host-* and trust-* commands
     pub-tht         Publish THT entry according to data returned by 'trust-list' and 'host-list'
 
-    issue           Issue new coins
     transfer        Transfers property of coins (coins are read from STDIN)
-    change          Change coins to make other coins (coins are read from STDIN)
     clist           List coins of given user. May be limited by upper amount.
     cget            Get coins for given values in user account.
 
@@ -167,11 +163,6 @@ if [ ! -z $dividend ]; then
   ucoin="$ucoin --dividend $dividend"
 fi
 
-if [ ! -z $mincoin ]; then
-  ucoinsh="$ucoinsh -m $mincoin"
-  ucoin="$ucoin --mincoin $mincoin"
-fi
-
 if [ ! -z $votes ]; then
   ucoinsh="$ucoinsh -n $votes"
   ucoin="$ucoin --votes $votes"
@@ -267,7 +258,7 @@ confirmThat()
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-change|forge-issuance|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
+  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -466,15 +457,6 @@ case "$cmd" in
     rm pubkey.ucoin.tmp
     ;;
   
-  issue)
-      $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
-    ! $DEBUG && $ucoinsh -u $user forge-issuance $2 $3 $4 > issuance.ucoin.tmp
-    if [ $? -eq 0 ]; then
-      $ucoin issue --transaction issuance.ucoin.tmp
-    fi
-    rm issuance.ucoin.tmp
-    ;;
-  
   transfer)
     coins=`cat`
       $DEBUG && $ucoinsh -u $user forge-transfer $2 $3 $coins > transfer.ucoin.tmp
@@ -483,16 +465,6 @@ case "$cmd" in
       $ucoin transfer --transaction transfer.ucoin.tmp
     fi
     rm transfer.ucoin.tmp
-    ;;
-  
-  change)
-    coins=`cat`
-      $DEBUG && $ucoinsh -u $user forge-change $coins $2 > change.ucoin.tmp
-    ! $DEBUG && $ucoinsh -u $user forge-change $coins $2 > change.ucoin.tmp
-    if [ $? -eq 0 ]; then
-      $ucoin change --transaction change.ucoin.tmp
-    fi
-    rm change.ucoin.tmp
     ;;
   
   lookup)
@@ -584,37 +556,15 @@ case "$cmd" in
     rm voting.ucoin.tmp.asc
     ;;
 
-  forge-issuance)
-    if [[ -z $2 ]] || [[ -z $3 ]]; then
-      $verbose && echo "Bad command. Usage: $0 -u [user] forge-issuance <#amendment> <coin1base,coin1pow[,...]> [<multiline comment>]"
-      exit 1
-    fi
-    if [[ ! -z $4 ]]; then
-      comment="$4"
-    fi
-    sign "$ucoin forge-issuance $2 --coins $3 --sender $fpr" "ISSUANCE"
-    ;;
-
   forge-transfer)
     if [[ -z $2 ]] || [[ -z $3 ]]; then
-      $verbose && echo "Bad command. Usage: $0 -u [user] forge-transfer <recipient> [<multiline comment>]" >&2
+      echo "Bad command. Usage: $0 -u [user] forge-transfer <recipient> [<multiline comment>]" >&2
       exit 1
     fi
     if [[ ! -z $4 ]]; then
       comment="$4"
     fi
-    sign "$ucoin forge-transfer --recipient $2 --pay $3 --sender $fpr" "TRANSFER"
-    ;;
-
-  forge-change)
-    if [[ -z $2 ]] || [[ -z $3 ]]; then
-      $verbose && echo "Bad command. Usage: $0 -u [user] forge-change <coin1base,coin1pow[,...]> <coin1base,coin1pow[,...]> [<multiline comment>]"
-      exit 1
-    fi
-    if [[ ! -z $4 ]]; then
-      comment="$4"
-    fi
-    sign "$ucoin forge-change --pay $2 --coins $3 --sender $fpr" "CHANGE"
+    sign "$ucoin forge-transfer --recipient $2 --pay $3 --sender $fpr"
     ;;
 
   forge-cert)

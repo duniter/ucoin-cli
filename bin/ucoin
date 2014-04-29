@@ -20,7 +20,6 @@ program
   .option('--key <keyFile>', 'File of the key to submit.')
   .option('--search <search>', 'Search string')
   .option('--votefile <voteFile>', 'Vote file to send.')
-  .option('--coins <base,power[,...]>', 'Coins to create.', splitCoins)
   .option('--pay <issuer,number[,...]>', 'Coins to transfer.', splitCoins2)
   .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
@@ -386,8 +385,7 @@ program
         var get = {};
         var err = null;
         program.pay.forEach(function (coin) {
-          var amount = coin.number; // This is bad name
-          amount = parseInt(amount);
+          var amount = parseInt(coin.value);
           if(coins[amount] && coins[amount].length > 0){
             var c = coins[amount][0];
             get[c.issuer] = get[c.issuer] || [];
@@ -422,21 +420,6 @@ program
   }));
 
 program
-  .command('issue')
-  .description('Send issuance transaction.')
-  .action(connect(function (node) {
-    if(!program.transaction){
-      console.error("Requires --transaction parameter");
-      return;
-    }
-    var tx = fs.readFileSync(program.transaction, 'utf8');
-    node.hdc.transactions.processs(tx, proxy(function (res) {
-      console.log("Posted issuance transaction");
-    }));
-    return;
-  }));
-
-program
   .command('transfer')
   .description('Send transfer transaction.')
   .action(connect(function (node) {
@@ -447,21 +430,6 @@ program
     var tx = fs.readFileSync(program.transaction, 'utf8');
     node.hdc.transactions.processs(tx, proxy(function (res) {
       console.log("Posted transfer transaction");
-    }));
-    return;
-  }));
-
-program
-  .command('change')
-  .description('Send change transaction.')
-  .action(connect(function (node) {
-    if(!program.transaction){
-      console.error("Requires --transaction parameter");
-      return;
-    }
-    var tx = fs.readFileSync(program.transaction, 'utf8');
-    node.hdc.transactions.processs(tx, proxy(function (res) {
-      console.log("Posted change transaction");
     }));
     return;
   }));
@@ -512,238 +480,6 @@ program
   }));
 
 program
-  .command('forge-issuance [am_number]')
-  .description('Forge HDC issuance transaction.')
-  .action(connect(function (amNumber, node) {
-    var tx = new hdc.Transaction();
-    var newCoinsStart = 0;
-    var am = null;
-    async.waterfall([
-      function (next){
-        // Options control
-        if(!program.coins){
-          next('You must give at least one coin with --coins option');
-          return;
-        }
-        if(!program.sender){
-          next('You must give sender\'s fingerprint with --sender option');
-          return;
-        }
-        next();
-      },
-      function (next){
-        // Find amendment's Dividend and power constraint
-        node.hdc.amendments.promoted(amNumber, next);
-      },
-      function (amTarget, next){
-        am = amTarget;
-        if(!am.dividend){
-          next('No Universal Dividend available on this amendment.');
-          return;
-        }
-        node.ucg.peering.get(next);
-      },
-      function (peering, next){
-        tx.version = "1";
-        tx.currency = peering.currency;
-        tx.sender = program.sender;
-        tx.recipient = tx.sender;
-        tx.type = 'ISSUANCE';
-        tx.comment = program.comment ? program.comment : '';
-        // Find last transaction
-        node.hdc.transactions.sender.last(tx.sender, function (err, transaction) {
-          var txTemp = new hdc.Transaction();
-          err = err || transaction == null;
-          if (!err) {
-            // Copy values to HDC object
-            _(transaction).keys().forEach(function(prop){
-              txTemp[prop] = transaction[prop];
-            });
-            txTemp.coins.forEach(function(coin, index){
-              txTemp.coins[index] = coin.id + (coin.transaction_id ? ', ' + coin.transaction_id : '');
-            });
-          }
-          tx.number = err ? 0 : parseInt(txTemp.number, 10) + 1;
-          tx.previousHash = err ? null : sha1(txTemp.getRaw().unix2dos() + txTemp.signature).toUpperCase();
-          next();
-        });
-      },
-      function (next) {
-        // Find next issuance coin number
-        node.hdc.coins.last(tx.sender, function (err, json) {
-          if(!err){
-            newCoinsStart = json.number + 1;
-          }
-          next();
-        });
-      },
-      function (next){
-        // Find already issued from the amendment
-        node.hdc.transactions.sender.ud(tx.sender, amNumber, next);
-      },
-      function (json, next){
-        // Computes the sum and what is left to create
-        var sum = 0;
-        json.transactions.forEach(function (jsonTX) {
-          jsonTX.coins.forEach(function (coinObj) {
-            var coin = coinObj.id.coin();
-            sum += coin.base * Math.pow(10, coin.power);
-          });
-        });
-        next(null, am.dividend - sum);
-      },
-      function (remainder, next) {
-        if (remainder <= 0) {
-          next('Universal Dividend of this amendment was fully created');
-          return;
-        }
-        tx.coins = [];
-        var sum = 0;
-        var err = null;
-        program.coins.forEach(function (coin) {
-          if(!err){
-            if(am.coinMinPower && coin.power < am.coinMinPower){
-              err = 'Coin must have power > ' + am.coinMinPower;
-              return;
-            }
-            sum += coin.base * Math.pow(10, coin.power);
-            tx.coins.push(tx.sender+'-'+newCoinsStart+'-'+coin.base+'-'+coin.power+'-A-'+amNumber);
-            newCoinsStart++;
-          }
-        });
-        if(err){
-          next(err);
-          return;
-        }
-        if(remainder - sum < 0){
-          next('Amount of coins ('+sum+') exceed your remaining Universal Dividend ('+remainder+') for this amendment');
-          return;
-        }
-        next();
-      }
-    ], function (err, result) {
-      if(err){
-        console.error(err);
-        process.exit(1);
-        return;
-      }
-      console.log(tx.getRaw());
-    });
-    return;
-  }));
-
-program
-  .command('forge-change')
-  .description('Forge HDC change transaction.')
-  .action(connect(function (node) {
-    var tx = new hdc.Transaction();
-    var newCoinsStart = 0;
-    var am = null;
-    async.waterfall([
-      function (next){
-        // Options control
-        if(!program.coins || program.coins.length < 1){
-          next('You must give at least one coin with --coins option', program.coins);
-          return;
-        }
-        if(!program.pay || program.pay.length < 1){
-          next('You must give at least one source coin with --pay option');
-          return;
-        }
-        if(!program.sender){
-          next('You must give sender\'s fingerprint with --sender option');
-          return;
-        }
-        next();
-      },
-      function (next){
-        node.ucg.peering.get(next);
-      },
-      function (peering, next){
-        tx.version = "1";
-        tx.currency = peering.currency;
-        tx.sender = program.sender;
-        tx.recipient = tx.sender;
-        tx.type = 'CHANGE';
-        tx.comment = program.comment ? program.comment : '';
-        // Find last transaction
-        node.hdc.transactions.sender.last(tx.sender, function (err, transaction) {
-          var txTemp = new hdc.Transaction();
-          // Copy values to HDC object
-          _(transaction).keys().forEach(function(prop){
-            txTemp[prop] = transaction[prop];
-          });
-          txTemp.coins.forEach(function(coin, index){
-            txTemp.coins[index] = coin.id + (coin.transaction_id ? ', ' + coin.transaction_id : '');
-          });
-          tx.number = err ? 0 : parseInt(txTemp.number, 10) + 1;
-          tx.previousHash = err ? null : sha1(txTemp.getRaw().unix2dos() + txTemp.signature).toUpperCase();
-          next();
-        });
-      },
-      function (next) {
-        // Find next issuance coin number
-        node.hdc.coins.last(tx.sender, function (err, json) {
-          if(!err){
-            newCoinsStart = json.number + 1;
-          }
-          next();
-        });
-      },
-      function (next){
-        tx.coins = [];
-        async.forEach(program.pay, function(coin, callback){
-          node.hdc.coins.view(coin.issuer, coin.number, function (err, json) {
-            if(json.owner != tx.sender){
-              callback('Trying to divide a coin you do not own ('+json.id+')');
-              return;
-            }
-            tx.coins.push(json.id + ', ' + json.transaction);
-            callback(err);
-          });
-        }, next);
-      },
-      function (next){
-        var materialSum = 0;
-        tx.getCoins().forEach(function (coin) {
-          materialSum += coin.base * Math.pow(10, coin.power);
-        });
-        var changeSum = 0;
-        var changeCoins = [];
-        program.coins.forEach(function (coin) {
-          // if(!err){
-            // if(am.coinMinPower && coin.power < am.coinMinPower){
-            //   err = 'Coin must have power > ' + am.coinMinPower;
-            //   return;
-            // }
-            changeSum += coin.base * Math.pow(10, coin.power);
-            changeCoins.push(tx.sender+'-'+newCoinsStart+'-'+coin.base+'-'+coin.power+'-C-'+tx.number);
-            newCoinsStart++;
-          // }
-        });
-        tx.coins = _(changeCoins).union(tx.coins);
-        // if(err){
-        //   next(err);
-        //   return;
-        // }
-        if(changeSum != materialSum){
-          next('Amount of material coins ('+ materialSum +') is not equals to change coins ('+ changeSum +')');
-          return;
-        }
-        next();
-      }
-    ], function (err, result) {
-      if(err){
-        console.error(err);
-        process.exit(1);
-        return;
-      }
-      console.log(tx.getRaw());
-    });
-    return;
-  }));
-
-program
   .command('forge-transfer')
   .description('Forge HDC issuance transaction.')
   .action(connect(function (node) {
@@ -773,23 +509,38 @@ program
         tx.currency = peering.currency;
         tx.sender = program.sender;
         tx.recipient = program.recipient;
-        tx.type = 'TRANSFER';
         tx.comment = program.comment ? program.comment : '';
         tx.coins = [];
         // Find last transaction
-        node.hdc.transactions.sender.last(tx.sender, function (err, json) {
-          tx.number = err ? 0 : parseInt(json.transaction.number, 10) + 1;
-          tx.previousHash = err ? null : sha1(json.raw.unix2dos() + json.signature).toUpperCase();
+        node.hdc.transactions.sender.last(tx.sender, function (err, lastTx) {
+          if (!err && lastTx) {
+            var newTx = new hdc.Transaction();
+            _(newTx).extend(lastTx);
+            newTx.coins.sort();
+            tx.number = parseInt(lastTx.number, 10) + 1;
+            tx.previousHash = sha1(newTx.getRaw().unix2dos() + lastTx.signature).toUpperCase();
+          } else {
+            tx.number = 0;
+          }
           next();
         });
       },
       function (next) {
         async.forEach(program.pay, function(coin, callback){
-          node.hdc.coins.view(coin.issuer, coin.number, function (err, json) {
-            tx.coins.push(json.id + ', ' + json.transaction);
+          node.hdc.coins.owner(coin.issuer, coin.amNumber, coin.coinNumber, function (err, json) {
+            if (!err) {
+              var line = json.coinid;
+              if (json.transaction) {
+                line += ':' + json.transaction;
+              }
+              tx.coins.push(line);
+            }
             callback(err);
           });
-        }, next);
+        }, function (err) {
+          tx.coins.sort();
+          next(err);
+        });
       }
     ], function (err, result) {
       if(err){
@@ -1029,9 +780,12 @@ function splitCoins2 (arg) {
     var start = strings[0].match(/^[A-Z\d]{40}/) ? 1 : 0;
     for(var j = start; j < group.length; j++){
       if(group[j] && group[j] != ''){
+        var subIds = group[j].match(/^(\d+)(-(\d+))?$/);
         values.push({
           issuer: start == 1 ? group[0] : '',
-          number: group[j]
+          amNumber:  subIds[3] ? parseInt(subIds[1]) : '',
+          coinNumber: subIds[3] ? parseInt(subIds[3]) : '',
+          value: !subIds[3] ? parseInt(subIds[1]) : ''
         });
       }
     }
