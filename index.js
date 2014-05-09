@@ -435,8 +435,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
           var clearTextMessage = openpgp.cleartext.readArmored(clearSigned);
           var sigRes = openpgp.verifyClearSignedMessage(pubkeys, clearTextMessage);
           if (sigRes.signatures && sigRes.signatures.length > 0) {
-            var sameUnixText = sigRes.text == content.dos2unix(); // Same Unix text != what is really signed, could be DOS signed
-            verified = sigRes.signatures[0].valid && sameUnixText;
+            verified = sigRes.signatures[0].valid && sigRes.text == content;
           }
         }
         catch(ex){
