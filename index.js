@@ -1,14 +1,14 @@
 var _       = require('underscore');
 var fs      = require('fs');
-var openpgp = require('./openpgp').openpgp;
-
-openpgp.init();
+var openpgp = require('openpgp');
 
 module.exports = function (host, port, authenticated, withSignature, intialized){
   return new vuCoin(host, port, authenticated, withSignature, intialized);
 }
 
 function vuCoin(host, port, authenticated, withSignature, intialized){
+
+  var pubkeys = null;
 
   if(typeof authenticated == 'function'){
     intialized = authenticated;
@@ -351,7 +351,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     return authenticated ? {
       "url": "http://" + server() + url,
       "headers": {
-        "Accept": "multipart/signed"
+        "Accept": "multipart/msigned"
       }
     } : {
       "url": "http://" + server() + url
@@ -371,7 +371,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     if(err)
       done(err);
     else{
-      if(res.headers['content-type'] && res.headers['content-type'].match(/multipart\/signed/)){
+      if(res.headers['content-type'] && res.headers['content-type'].match(/multipart\/msigned/)){
         if(authenticated)
           verifyResponse(res, body, done);
         else{
@@ -393,7 +393,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         try{
           if(err)
             throw new Error(err);
-          openpgp.keyring.importPublicKey(body);
+          pubkeys = openpgp.key.readArmored(body).keys;
           intialized(null, that);
         }
         catch(ex){
@@ -405,7 +405,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       try{
         if(err)
           throw new Error(err);
-        openpgp.keyring.importPublicKey(authenticated);
+        pubkeys = openpgp.key.readArmored(authenticated).keys;
         console.error("Public key imported.");
         intialized(null, that);
       }
@@ -418,29 +418,82 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   function verifyResponse(res, body, done) {
     var type = res.headers["content-type"];
-    if(type && type.match(/multipart\/signed/)){
+    if(type && type.match(/multipart\/msigned/)){
       var boundaries = type.match(/boundary=([\w\d]*);/);
       if(boundaries.length > 1){
         var boundary = "--" + boundaries[1];
-        body = body.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
         var index1 = body.indexOf(boundary);
-        var index2 = body.indexOf(boundary, boundary.length + index1);
-        var index3 = body.indexOf(boundary, boundary.length + index2);
-        var content = body.substring(boundary.length + '\r\n'.length + index1, index2 - '\r\n'.length*2);
+        var index2 = body.indexOf(boundary, index1 + boundary.length);
+        var index3 = body.indexOf(boundary, index2 + boundary.length);
+        var content = body.substring(index1 + boundary.length + '\r\n'.length, index2 - '\r\n'.length*1);
         var signature = body.substring(boundary.length + '\r\n'.length + index2, index3 - '\r\n'.length*2);
         var sigMessage = signature.substring(signature.lastIndexOf('-----BEGIN PGP'));
-        signature = "-----BEGIN PGP SIGNED MESSAGE-----\r\nHash: SHA256\r\n\r\n" + content + '\r\n' + sigMessage;
-        var sig = openpgp.read_message(sigMessage)[0];
-        sig.text = content;
-        if(sig.verifySignature()){
-          var result = content;
-          errorCode(res, result, sigMessage, done);
+        content = content.substring(content.indexOf('\r\n\r\n') + '\r\n'.length*2);
+        var verified = false;
+        try{
+          var clearSigned = toClearSign(content, sigMessage);
+          var clearTextMessage = openpgp.cleartext.readArmored(clearSigned);
+          var sigRes = openpgp.verifyClearSignedMessage(pubkeys, clearTextMessage);
+          if (sigRes.signatures && sigRes.signatures.length > 0) {
+            var sameUnixText = sigRes.text == content.dos2unix(); // Same Unix text != what is really signed, could be DOS signed
+            verified = sigRes.signatures[0].valid && sameUnixText;
+          }
+        }
+        catch(ex){
+          err = ex.toString();
+          console.error('Exception during signature verification: ' + err);
+        }
+        if(verified){
+          errorCode(res, content, sigMessage, done);
         }
         else done("Signature verification failed");
       }
     }
     else done("Non signed content.");
   }
+
+  function toClearSign (data, signature) {
+    if (signature.match(/-----BEGIN PGP SIGNED MESSAGE-----/))
+      return signature
+    else {
+      var msg = '-----BEGIN PGP SIGNED MESSAGE-----\r\n' +
+              'Hash: SHA1\r\n' +
+              '\r\n' +
+              data.replace(/^-----/gm, '- -----') + '\r\n' +
+              signature + '\r\n';
+
+      var signatureAlgo = findSignatureAlgorithm(msg) || 2;
+      msg = msg.replace('Hash: SHA1', 'Hash: ' + hashAlgorithms[signatureAlgo.toString()]);
+
+      return msg;
+    }
+  }
+
+  function findSignatureAlgorithm (msg) {
+    var signatureAlgo = null;
+    var input = openpgp.armor.decode(msg);
+    if (input.type !== openpgp.enums.armor.signed) {
+      throw new Error('No cleartext signed message.');
+    }
+    var packetlist = new openpgp.packet.List();
+    packetlist.read(input.data);
+    packetlist.forEach(function(packet){
+      if (packet.tag == openpgp.enums.packet.signature) {
+        signatureAlgo = packet.hashAlgorithm;
+      }
+    });
+    return signatureAlgo;
+  }
+
+  var hashAlgorithms = {
+    '1': "MD5",
+    '2': "SHA1",
+    '3': "RIPEMD160",
+    '8': "SHA256",
+    '9': "SHA384",
+    '10': "SHA512",
+    '11': "SHA224"
+  };
 
   function errorCode(res, body, signature, done) {
     if(signature && !done){
@@ -472,3 +525,10 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   return this;
 }
 
+String.prototype.dos2unix = function(){
+  return this.replace(/\r\n/g, '\n');
+};
+
+String.prototype.unix2dos = function(){
+  return this.dos2unix().replace(/\n/g, '\r\n');
+};
