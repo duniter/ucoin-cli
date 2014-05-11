@@ -435,7 +435,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
           var clearTextMessage = openpgp.cleartext.readArmored(clearSigned);
           var sigRes = openpgp.verifyClearSignedMessage(pubkeys, clearTextMessage);
           if (sigRes.signatures && sigRes.signatures.length > 0) {
-            verified = sigRes.signatures[0].valid && sigRes.text == content;
+            verified = sigRes.signatures[0].valid;
           }
         }
         catch(ex){
@@ -445,7 +445,9 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         if(verified){
           errorCode(res, content, sigMessage, done);
         }
-        else done("Signature verification failed");
+        else{
+          done("Signature verification failed for URL " + res.request.href);
+        }
       }
     }
     else done("Non signed content.");
