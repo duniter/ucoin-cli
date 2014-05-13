@@ -48,7 +48,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     }
   }
 
-  this.ucg = {
+  this.network = {
 
     pubkey: function (done) {
       get('/network/pubkey', done);
@@ -243,7 +243,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     }
   };
 
-  this.ucs = {
+  this.registry = {
 
     parameters: function (done) {
       get('/registry/parameters', done);
