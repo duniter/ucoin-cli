@@ -75,6 +75,7 @@ verbose=false
 DEBUG=false
 comment=
 fpr=
+date=
 while getopts :hs:p:u:t:d:m:n:vDcC OPT; do
   case "$OPT" in
     s)
@@ -255,6 +256,17 @@ confirmThat()
     esac
   done
 }
+
+case "$cmd" in
+
+  join|actualize|leave|voter)
+    if [[ ! -z $2 ]]; then
+      date=$2
+    else
+      date=`date +%s`
+    fi
+    ;;
+esac
 
 case "$cmd" in
 
@@ -502,42 +514,45 @@ case "$cmd" in
   
   join)
     currency=`$ucoin currency`
-    echo "Version: 1" > join.ucoin.tmp
-    echo "Currency: $currency" >> join.ucoin.tmp
-    echo "Registry: MEMBERSHIP" >> join.ucoin.tmp
-    echo "Issuer: $fpr" >> join.ucoin.tmp
-    echo "Membership: IN" >> join.ucoin.tmp
-    cat join.ucoin.tmp
-    sign "cat join.ucoin.tmp" > join.ucoin.tmp.asc
-    $ucoin update-membership --membership join.ucoin.tmp.asc
-    rm join.ucoin.tmp
-    rm join.ucoin.tmp.asc
+    echo "Version: 1" > ms.ucoin.tmp
+    echo "Currency: $currency" >> ms.ucoin.tmp
+    echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
+    echo "Issuer: $fpr" >> ms.ucoin.tmp
+    echo "Date: $date" >> ms.ucoin.tmp
+    echo "Membership: IN" >> ms.ucoin.tmp
+    cat ms.ucoin.tmp
+    sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
+    $ucoin update-membership --membership ms.ucoin.tmp.asc
+    rm ms.ucoin.tmp
+    rm ms.ucoin.tmp.asc
     ;;
   
   actualize)
     currency=`$ucoin currency`
-    echo "Version: 1" > actu.ucoin.tmp
-    echo "Currency: $currency" >> actu.ucoin.tmp
-    echo "Registry: MEMBERSHIP" >> actu.ucoin.tmp
-    echo "Issuer: $fpr" >> actu.ucoin.tmp
-    echo "Membership: IN" >> actu.ucoin.tmp
-    sign "cat actu.ucoin.tmp" > actu.ucoin.tmp.asc
-    $ucoin update-membership --membership actu.ucoin.tmp.asc
-    rm actu.ucoin.tmp
-    rm actu.ucoin.tmp.asc
+    echo "Version: 1" > ms.ucoin.tmp
+    echo "Currency: $currency" >> ms.ucoin.tmp
+    echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
+    echo "Issuer: $fpr" >> ms.ucoin.tmp
+    echo "Date: $date" >> ms.ucoin.tmp
+    echo "Membership: IN" >> ms.ucoin.tmp
+    sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
+    $ucoin update-membership --membership ms.ucoin.tmp.asc
+    rm ms.ucoin.tmp
+    rm ms.ucoin.tmp.asc
     ;;
   
   leave)
     currency=`$ucoin currency`
-    echo "Version: 1" > leave.ucoin.tmp
-    echo "Currency: $currency" >> leave.ucoin.tmp
-    echo "Registry: MEMBERSHIP" >> leave.ucoin.tmp
-    echo "Issuer: $fpr" >> leave.ucoin.tmp
-    echo "Membership: OUT" >> leave.ucoin.tmp
-    sign "cat leave.ucoin.tmp" > leave.ucoin.tmp.asc
-    $ucoin update-membership --membership leave.ucoin.tmp.asc
-    rm leave.ucoin.tmp
-    rm leave.ucoin.tmp.asc
+    echo "Version: 1" > ms.ucoin.tmp
+    echo "Currency: $currency" >> ms.ucoin.tmp
+    echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
+    echo "Issuer: $fpr" >> ms.ucoin.tmp
+    echo "Date: $date" >> ms.ucoin.tmp
+    echo "Membership: OUT" >> ms.ucoin.tmp
+    sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
+    $ucoin update-membership --membership ms.ucoin.tmp.asc
+    rm ms.ucoin.tmp
+    rm ms.ucoin.tmp.asc
     ;;
   
   voter)
@@ -550,6 +565,7 @@ case "$cmd" in
     echo "Currency: $currency" >> voting.ucoin.tmp
     echo "Registry: VOTING" >> voting.ucoin.tmp
     echo "Issuer: $fpr" >> voting.ucoin.tmp
+    echo "Date: $date" >> voting.ucoin.tmp
     sign "cat voting.ucoin.tmp" > voting.ucoin.tmp.asc
     $ucoin update-voting --voting voting.ucoin.tmp.asc
     rm voting.ucoin.tmp
