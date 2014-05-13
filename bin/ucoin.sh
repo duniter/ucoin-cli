@@ -29,8 +29,8 @@ cat > /dev/stderr <<-EOF
 
     host-(add|rm)   (Add|Remove) given key fingerprint to hosts managing transactions of key -u
     trust-(add|rm)  (Add|Remove) given key fingerprint to hosts key -u trust for receiving transactions
-    tht             Show THT entry resulting of host-* and trust-* commands
-    pub-tht         Publish THT entry according to data returned by 'trust-list' and 'host-list'
+    wallet          Show wallet resulting of host-* and trust-* commands
+    pub-wallet      Publish wallet returned by 'wallet' command
 
     transfer        Transfers property of coins (coins are read from STDIN)
     clist           List coins of given user. May be limited by upper amount.
@@ -62,6 +62,7 @@ EOF
 APP_DIR="$HOME/.ucoin"
 hostFile='hosts'
 trustFile='trusts'
+trustMinFile='trustsMin'
 SERVER=
 PORT=
 user=
@@ -259,7 +260,7 @@ confirmThat()
 
 case "$cmd" in
 
-  join|actualize|leave|voter)
+  join|actualize|leave|voter|tht|pub-tht)
     if [[ ! -z $2 ]]; then
       date=$2
     else
@@ -270,7 +271,7 @@ esac
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
+  tht|pub-tht|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -286,9 +287,10 @@ esac
 FPR_DIR=
 HOSTS_FILE=
 TRUSTS_FILE=
+TRUSTS_MIN_FILE=
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-add|trust-rm)
+  tht|pub-tht|host-add|host-rm|trust-min|trust-add|trust-rm)
     # $HOME/.ucoin/ must be a dir
     if [[ -e $APP_DIR ]] && [[ ! -d $APP_DIR ]]; then
       echo "$APP_DIR must be a directory" >&2
@@ -312,6 +314,7 @@ case "$cmd" in
     esac
     HOSTS_FILE="$FPR_DIR/$hostFile" && touch $HOSTS_FILE
     TRUSTS_FILE="$FPR_DIR/$trustFile" && touch $TRUSTS_FILE
+    TRUSTS_MIN_FILE="$FPR_DIR/$trustMinFile" && touch $TRUSTS_MIN_FILE
     ;;
 esac
 
@@ -334,6 +337,10 @@ case "$cmd" in
     sed -i "/$2/d" $HOSTS_FILE
     ;;
   
+  trust-min)
+    echo $2 > $TRUSTS_MIN_FILE
+    ;;
+  
   trust-add)
     echo $2 >> $TRUSTS_FILE
     sort -u $TRUSTS_FILE -o "$TRUSTS_FILE"
@@ -344,6 +351,9 @@ case "$cmd" in
     ;;
   
   tht)
+    echo "Date: $date"
+    echo -n "RequiredTrusts: "
+    cat $TRUSTS_MIN_FILE
     echo "Hosters:"
     cat $HOSTS_FILE
     echo "Trusts:"
@@ -356,6 +366,9 @@ case "$cmd" in
     echo "Version: 1" > $PUB_FILE
     echo "Currency: $currency" >> $PUB_FILE
     echo "Key: $fpr" >> $PUB_FILE
+    echo "Date: $date" >> $PUB_FILE
+    echo -n "RequiredTrusts: " >> $PUB_FILE
+    cat $TRUSTS_MIN_FILE >> $PUB_FILE
     echo "Hosters:" >> $PUB_FILE
     cat $HOSTS_FILE >> $PUB_FILE
     echo "Trusts:" >> $PUB_FILE

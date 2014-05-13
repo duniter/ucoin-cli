@@ -110,17 +110,17 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       }
     },
 
-    tht: {
+    wallet: {
 
       get: function (done) {
         var opts = arguments.length == 1 ? {} : arguments[0];
         var done = arguments.length == 1 ? arguments[0] : arguments[1];
-        dealMerkle('/network/tht', opts, done);
+        dealMerkle('/network/wallet', opts, done);
       },
 
       post: function (entry, done) {
         var sigIndex = entry.indexOf("-----BEGIN");
-        post('/network/tht', done)
+        post('/network/wallet', done)
         .form({
           "entry": entry.substring(0, sigIndex),
           "signature": entry.substring(sigIndex)
@@ -128,7 +128,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       },
 
       of: function (fingerprint, done) {
-        get('/network/tht/' + fingerprint, done);
+        get('/network/wallet/' + fingerprint, done);
       }
     }
   }

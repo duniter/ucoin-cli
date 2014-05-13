@@ -59,7 +59,7 @@ program
 
 program
   .command('pub-tht')
-  .description('Publish THT entry.')
+  .description('Publish Wallet.')
   .action(function(){
     // Read STDIN first
     process.stdin.setEncoding('utf8');
@@ -69,7 +69,7 @@ program
     process.stdin.on('end', function() {
       connect(function (node) {
         node.ucg.tht.post(stdinData, proxy(function (json) {
-          console.log('Posted THT entry.');
+          console.log('Posted Wallet.');
         }));
       })();
     });
