@@ -260,7 +260,7 @@ confirmThat()
 
 case "$cmd" in
 
-  join|actualize|leave|voter|tht|pub-tht)
+  join|actualize|leave|voter|wallet|pub-wallet)
     if [[ ! -z $2 ]]; then
       date=$2
     else
@@ -271,7 +271,7 @@ esac
 
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
+  wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -290,7 +290,7 @@ TRUSTS_FILE=
 TRUSTS_MIN_FILE=
 case "$cmd" in
 
-  tht|pub-tht|host-add|host-rm|trust-min|trust-add|trust-rm)
+  wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm)
     # $HOME/.ucoin/ must be a dir
     if [[ -e $APP_DIR ]] && [[ ! -d $APP_DIR ]]; then
       echo "$APP_DIR must be a directory" >&2
@@ -350,7 +350,7 @@ case "$cmd" in
     sed -i "/$2/d" $TRUSTS_FILE
     ;;
   
-  tht)
+  wallet)
     echo "Date: $date"
     echo -n "RequiredTrusts: "
     cat $TRUSTS_MIN_FILE
@@ -360,7 +360,7 @@ case "$cmd" in
     cat $TRUSTS_FILE
     ;;
   
-  pub-tht)
+  pub-wallet)
     PUB_FILE="$FPR_DIR/pub"
     currency=`$ucoin currency`
     echo "Version: 1" > $PUB_FILE
@@ -374,7 +374,7 @@ case "$cmd" in
     echo "Trusts:" >> $PUB_FILE
     cat $TRUSTS_FILE >> $PUB_FILE
     unix2dos $PUB_FILE 2>/dev/null
-    sign "cat $PUB_FILE" | $ucoin pub-tht
+    sign "cat $PUB_FILE" | $ucoin pub-wallet
     ;;
   
   vote)

@@ -41,7 +41,7 @@ program
   .command('pubkey')
   .description('Show remote pubkey in ASCII armored format.')
   .action(connect(function (node) {
-    node.ucg.pubkey(proxy(function (res) {
+    node.network.pubkey(proxy(function (res) {
       console.log(res);
     }));
     return;
@@ -51,14 +51,14 @@ program
   .command('currency')
   .description('Give currency name for a given host and port.')
   .action(connect(function (node) {
-    node.ucg.peering.get(proxy(function (json) {
+    node.network.peering.get(proxy(function (json) {
       console.log(json.currency);
     }));
     return;
   }));
 
 program
-  .command('pub-tht')
+  .command('pub-wallet')
   .description('Publish Wallet.')
   .action(function(){
     // Read STDIN first
@@ -68,7 +68,7 @@ program
     });
     process.stdin.on('end', function() {
       connect(function (node) {
-        node.ucg.tht.post(stdinData, proxy(function (json) {
+        node.network.wallet.post(stdinData, proxy(function (json) {
           console.log('Posted Wallet.');
         }));
       })();
@@ -138,7 +138,7 @@ program
   .command('peer')
   .description('Show remote peering informations.')
   .action(connect(function (node) {
-    node.ucg.peering.get(proxy(function (res) {
+    node.network.peering.get(proxy(function (res) {
       console.log("Currency: %s", res.currency);
       console.log("Public key: %s", res.fingerprint);
       res.endpoints.forEach(function(endpoint, index){
@@ -176,7 +176,7 @@ program
         });
       },
       function (nextNumber, next){
-        node.ucs.amendment.proposed(parseInt(nextNumber) + 1, next);
+        node.registry.amendment.proposed(parseInt(nextNumber) + 1, next);
       },
     ], function (err, res) {
       if (err) {
@@ -459,7 +459,7 @@ program
       return;
     }
     var vote = fs.readFileSync(program.membership, 'utf8');
-    node.ucs.community.members.post(vote, proxy(function (res) {
+    node.registry.community.members.post(vote, proxy(function (res) {
       console.log("Posted membership " + res.membership.membership + " for key " + res.membership.issuer);
     }));
     return;
@@ -474,7 +474,7 @@ program
       return;
     }
     var vote = fs.readFileSync(program.voting, 'utf8');
-    node.ucs.community.voters.post(vote, proxy(function (res) {
+    node.registry.community.voters.post(vote, proxy(function (res) {
       console.log("Posted voting key " + res.voting.votingKey + " for member " + res.voting.issuer);
     }));
     return;
@@ -503,7 +503,7 @@ program
         next();
       },
       function (next){
-        node.ucg.peering.get(next);
+        node.network.peering.get(next);
       },
       function (peering, next){
         tx.version = "1";
@@ -586,7 +586,7 @@ program
             // If no amendment, then default
             async.waterfall([
               function (cb){
-                node.ucg.peering.get(cb);
+                node.network.peering.get(cb);
               }
             ], function (err, result) {
               next(err, {
