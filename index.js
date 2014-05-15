@@ -235,9 +235,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         dealMerkle('/hdc/transactions/recipient/' + hash, opts, done);
       },
 
-      view: function () {
-        var hash = arguments[0];
-        var number = arguments[1];
+      view: function (hash, number, done) {
         get('/hdc/transactions/sender/' + hash + '/view/' + number, done);
       }
     }
