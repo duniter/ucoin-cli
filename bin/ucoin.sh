@@ -271,7 +271,7 @@ esac
 
 case "$cmd" in
 
-  wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
+  send-pubkey|wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
