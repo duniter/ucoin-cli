@@ -1,5 +1,6 @@
 var _       = require('underscore');
 var fs      = require('fs');
+var async   = require('async');
 var openpgp = require('openpgp');
 
 module.exports = function (host, port, authenticated, withSignature, intialized){
@@ -57,7 +58,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     peering: {
 
       get: function (done) {
-        get('/network/peering', done);
+        getPeer('/network/peering', done);
       },
 
       peers: {
@@ -65,48 +66,54 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         get: function (done) {
           var opts = arguments.length == 1 ? {} : arguments[0];
           var done = arguments.length == 1 ? arguments[0] : arguments[1];
-          dealMerkle('/network/peering/peers', opts, done);
+          dealMerkle(ResultTypes.Peer, '/network/peering/peers', opts, done);
+        },
+
+        post: function (entry, done) {
+          var sigIndex = entry.indexOf("-----BEGIN");
+          postPeer('/network/peering/peers', {
+            "entry": entry.substring(0, sigIndex),
+            "signature": entry.substring(sigIndex)
+          }, done);
         },
 
         upstream: {
           
           get: function (done) {
-            get('/network/peering/peers/upstream', done);
+            getStream('/network/peering/peers/upstream', done);
           },
           
           of: function (fingerprint, done) {
-            get('/network/peering/peers/upstream/' + fingerprint, done);
+            getStream('/network/peering/peers/upstream/' + fingerprint, done);
           },
         },
 
         downstream: {
           
           get: function (done) {
-            get('/network/peering/peers/downstream', done);
+            getStream('/network/peering/peers/downstream', done);
           },
           
           of: function (fingerprint, done) {
-            get('/network/peering/peers/downstream/' + fingerprint, done);
+            getStream('/network/peering/peers/downstream/' + fingerprint, done);
           },
         }
       },
 
       forward: function (forward, done) {
         var sigIndex = forward.indexOf("-----BEGIN");
-        post('/network/peering/forward', done)
-        .form({
+        postForward('/network/peering/forward', {
           "forward": forward.substring(0, sigIndex),
           "signature": forward.substring(sigIndex)
-        });
+        }, done);
       },
 
       status: function (status, done) {
         var sigIndex = status.indexOf("-----BEGIN");
-        post('/network/peering/status', done)
-        .form({
+        postStatus('/network/peering/status', {
           "status": status.substring(0, sigIndex),
           "signature": status.substring(sigIndex)
-        });
+        }, done);
       }
     },
 
@@ -115,20 +122,19 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       get: function (done) {
         var opts = arguments.length == 1 ? {} : arguments[0];
         var done = arguments.length == 1 ? arguments[0] : arguments[1];
-        dealMerkle('/network/wallet', opts, done);
+        dealMerkle(ResultTypes.Wallet, '/network/wallet', opts, done);
       },
 
       post: function (entry, done) {
         var sigIndex = entry.indexOf("-----BEGIN");
-        post('/network/wallet', done)
-        .form({
+        postWallet('/network/wallet', {
           "entry": entry.substring(0, sigIndex),
           "signature": entry.substring(sigIndex)
-        });
+        }, done);
       },
 
       of: function (fingerprint, done) {
-        get('/network/wallet/' + fingerprint, done);
+        getWallet('/network/wallet/' + fingerprint, done);
       }
     }
   }
@@ -138,37 +144,36 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     amendments: {
 
       current: function (done) {
-        get('/hdc/amendments/promoted', done);
+        getAmendment('/hdc/amendments/promoted', done);
       },
 
       promoted: function (number, done) {
-        get('/hdc/amendments/promoted/' + number, done);
+        getAmendment('/hdc/amendments/promoted/' + number, done);
       },
 
       view: {
 
         self: function (number, hash, done) {
-          get('/hdc/amendments/view/' + number + '-' + hash + '/self', done);
+          getAmendment('/hdc/amendments/view/' + number + '-' + hash + '/self', done);
         },
 
         signatures: function (number, hash, done) {
-          amMerkle(arguments, 'signatures', done);
+          amMerkle(ResultTypes.Signature, arguments, 'signatures', done);
         }
       },
 
       votes: {
 
         get: function (done) {
-          get('/hdc/amendments/votes', done);
+          getAmendmentIndex('/hdc/amendments/votes', done);
         },
 
         post: function (vote, done) {
           var sigIndex = vote.indexOf("-----BEGIN");
-          post('/hdc/amendments/votes', done)
-          .form({
+          postVote('/hdc/amendments/votes', {
             "amendment": vote.substring(0, sigIndex),
             "signature": vote.substring(sigIndex)
-          });
+          }, done);
         }
       }
     },
@@ -176,67 +181,56 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     coins: {
 
       list: function (fingerprint, done) {
-        get('/hdc/coins/list/' + fingerprint, done);
+        getCoinList('/hdc/coins/list/' + fingerprint, done);
       },
 
       owner: function (fingerprint, amNumber, coinNumber, done) {
-        get('/hdc/coins/view/' + [fingerprint, amNumber, coinNumber].join('-') + '/owner', done);
+        getCoinOwning('/hdc/coins/view/' + [fingerprint, amNumber, coinNumber].join('-') + '/owner', done);
       },
 
       history: function (fingerprint, amNumber, coinNumber, done) {
-        get('/hdc/coins/view/' + [fingerprint, amNumber, coinNumber].join('-') + '/history', done);
+        getCoinOwningHistory('/hdc/coins/view/' + [fingerprint, amNumber, coinNumber].join('-') + '/history', done);
       }
     },
 
     transactions: {
 
-      last: function (done) {
-        get('/hdc/transactions/last/1', done);
-      },
-
       lasts: function (number, done) {
-        get('/hdc/transactions/last/' + number, done);
+        getTransactionList('/hdc/transactions/last/' + number, done);
       },
 
-      processs: function (tx, done) {
+      process: function (tx, done) {
         var sigIndex = tx.indexOf("-----BEGIN");
-        post('/hdc/transactions/process', done)
-        .form({
+        postTransaction('/hdc/transactions/process', {
           "transaction": tx.substring(0, sigIndex),
           "signature": tx.substring(sigIndex)
-        });
+        }, done);
       },
 
       sender: {
 
         get: function () {
-          txSenderMerkle(arguments, '');
+          txSenderMerkle(arguments);
         },
 
-        last: function (fingerprint, done) {
-          get('/hdc/transactions/sender/' + fingerprint + '/last/1', function (err, json) {
-            done(err, err || json.transactions.length == 0 ? null : json.transactions[0]);
-          });
+        lasts: function (fingerprint, number, from, done) {
+          if (from == undefined)
+            getTransactionList('/hdc/transactions/sender/' + fingerprint + '/last/' + number, done);
+          else
+            getTransactionList('/hdc/transactions/sender/' + fingerprint + '/last/' + number + '/' + from, done);
         },
-
-        lasts: function (fingerprint, number, done) {
-          get('/hdc/transactions/sender/' + fingerprint + '/last/' + number, done);
-        },
-
-        ud: function (fingerprint, amNumber, done) {
-          get('/hdc/transactions/sender/' + fingerprint + '/ud/' + amNumber, done);
-        }
       },
 
       recipient: function () {
-        var hash = arguments[0];
-        var opts = arguments.length == 2 ? {} : arguments[1];
-        var done = arguments.length == 2 ? arguments[1] : arguments[2];
-        dealMerkle('/hdc/transactions/recipient/' + hash, opts, done);
+        txRecipientMerkle(arguments);
+      },
+
+      refering: function (hash, number, done) {
+        getTransactionList('/hdc/transactions/refering/' + hash + '/' + number, done);
       },
 
       view: function (hash, number, done) {
-        get('/hdc/transactions/sender/' + hash + '/view/' + number, done);
+        getTransaction('/hdc/transactions/sender/' + hash + '/view/' + number, done);
       }
     }
   };
@@ -244,7 +238,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   this.registry = {
 
     parameters: function (done) {
-      get('/registry/parameters', done);
+      getParameters('/registry/parameters', done);
     },
 
     community: {
@@ -254,24 +248,23 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         get: function (ms, done) {
           var opts = arguments.length == 1 ? {} : arguments[0];
           var done = arguments.length == 1 ? arguments[0] : arguments[1];
-          dealMerkle('/registry/community/members', opts, done);
+          dealMerkle(ResultTypes.Membership, '/registry/community/members', opts, done);
         },
 
         post: function (ms, done) {
           var sigIndex = ms.indexOf("-----BEGIN");
-          post('/registry/community/members', done)
-          .form({
+          postMembership('/registry/community/members', {
             "membership": ms.substring(0, sigIndex),
             "signature": ms.substring(sigIndex)
-          });
+          }, done);
         },
 
         current: function (fingerprint, done) {
-          get('/registry/community/members/' + fingerprint + '/current', done);
+          getMembership('/registry/community/members/' + fingerprint + '/current', done);
         },
 
         history: function (fingerprint, done) {
-          get('/registry/community/members/' + fingerprint + '/history', done);
+          getMembershipHistory('/registry/community/members/' + fingerprint + '/history', done);
         }
       },
       
@@ -280,24 +273,23 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         get: function (ms, done) {
           var opts = arguments.length == 1 ? {} : arguments[0];
           var done = arguments.length == 1 ? arguments[0] : arguments[1];
-          dealMerkle('/registry/community/voters', opts, done);
+          dealMerkle(ResultTypes.Voting, '/registry/community/voters', opts, done);
         },
 
         post: function (voting, done) {
           var sigIndex = voting.indexOf("-----BEGIN");
-          post('/registry/community/voters', done)
-          .form({
+          postVoting('/registry/community/voters', {
             "voting": voting.substring(0, sigIndex),
             "signature": voting.substring(sigIndex)
-          });
+          }, done);
         },
 
         current: function (fingerprint, done) {
-          get('/registry/community/voters/' + fingerprint + '/current', done);
+          getVoting('/registry/community/voters/' + fingerprint + '/current', done);
         },
 
         history: function (fingerprint, done) {
-          get('/registry/community/voters/' + fingerprint + '/history', done);
+          getVotingHistory('/registry/community/voters/' + fingerprint + '/history', done);
         }
       }
     },
@@ -305,38 +297,46 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     amendment: {
 
       proposed: function (number, done) {
-          get('/registry/amendment/' + number, done);
+        getAmendment('/registry/amendment/' + number, done);
       },
 
       vote: function (number, done) {
-          get('/registry/amendment/' + number + '/vote', done);
+        getVote('/registry/amendment/' + number + '/vote', done);
       }
     }
   };
 
-  function txSenderMerkle (args, property) {
+  function txSenderMerkle (args) {
     var hash = args[0];
     var opts = args.length == 2 ? {} : args[1];
     var done = args.length == 2 ? args[1] : args[2];
-    dealMerkle('/hdc/transactions/sender/' + hash + property, opts, done);
+    dealMerkle(ResultTypes.Transaction, '/hdc/transactions/sender/' + hash, opts, done);
   }
 
-  function amMerkle (args, property) {
+  function txRecipientMerkle (args) {
+    var hash = args[0];
+    var opts = args.length == 2 ? {} : args[1];
+    var done = args.length == 2 ? args[1] : args[2];
+    dealMerkle(ResultTypes.Transaction, '/hdc/transactions/recipient/' + hash, opts, done);
+  }
+
+  function amMerkle (leafResult, args, property) {
     var number = args[0];
     var hash = args[1];
     var opts = args.length == 3 ? {} : args[2];
     var done = args.length == 3 ? opts : args[3];
-    dealMerkle('/hdc/amendments/view/' + number + '-' + hash + '/' + property, opts, done);
+    dealMerkle(leafResult, '/hdc/amendments/view/' + number + '-' + hash + '/' + property, opts, done);
   }
 
-  function dealMerkle (url, opts, done) {
+  function dealMerkle (leafType, url, opts, done) {
     var i = 0;
     _(opts).each(function (value, key) {
       url += (i == 0 ? '?' : '&');
       url += key + '=' + value;
       i++;
     });
-    get(url, done);
+    var getFunction = opts.leaves ? getMerkleWithLeaves : (opts.leaf ? async.apply(getMerkleWithLeaf, leafType) : getMerkle);
+    getFunction(url, done);
   }
 
   function server() {
@@ -362,6 +362,170 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   function post(url, callback) {
     return require('request').post(requestHead(url), _(vucoin_result).partial(callback));
+  }
+
+  function getPeer (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Peer));
+    });
+  }
+
+  function getStream (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Stream));
+    });
+  }
+
+  function getWallet (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Wallet));
+    });
+  }
+
+  function getAmendment (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Amendment));
+    });
+  }
+
+  function getAmendmentIndex (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.AmendmentIndex));
+    });
+  }
+
+  function getCoinList (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.CoinList));
+    });
+  }
+
+  function getCoinOwning (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.CoinOwning));
+    });
+  }
+
+  function getCoinOwningHistory (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.CoinOwningHistory));
+    });
+  }
+
+  function getTransaction (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Transaction));
+    });
+  }
+
+  function getTransactionList (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.TransactionList));
+    });
+  }
+
+  function getParameters (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Parameters));
+    });
+  }
+
+  function getMembership (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Membership));
+    });
+  }
+
+  function getMembershipHistory (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.MembershipHistory));
+    });
+  }
+
+  function getVoting (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Voting));
+    });
+  }
+
+  function getVotingHistory (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.VotingHistory));
+    });
+  }
+
+  function getVote (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Vote));
+    });
+  }
+
+  function getMerkle (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Merkle));
+    });
+  }
+
+  function getMerkleWithLeaves (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.MerkleWithLeaves));
+    });
+  }
+
+  function getMerkleWithLeaf (leafType, url, callback) {
+    get(url, function (err, res, body) {
+      var m = sanitize(res, ResultTypes.MerkleWithLeaf);
+      m.leaf.value = sanitize(m.leaf.value, leafType);
+      callback(err, m);
+    });
+  }
+
+  function postForward (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Forward));
+    }).form(data);
+  }
+
+  function postVote (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Vote));
+    }).form(data);
+  }
+
+  function postWallet (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Wallet));
+    }).form(data);
+  }
+
+  function postStatus (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Status));
+    }).form(data);
+  }
+
+  function postPeer (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Peer));
+    }).form(data);
+  }
+
+  function postTransaction (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Transaction));
+    }).form(data);
+  }
+
+  function postMembership (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Membership));
+    }).form(data);
+  }
+
+  function postVoting (url, data, callback) {
+    post(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Voting));
+    }).form(data);
   }
 
   function vucoin_result(done, err, res, body) {
@@ -530,4 +694,215 @@ String.prototype.dos2unix = function(){
 
 String.prototype.unix2dos = function(){
   return this.dos2unix().replace(/\n/g, '\r\n');
+};
+
+function sanitize (json, type) {
+  // Return type is either a string or an object
+  if (typeof json != typeof type) {
+    if (typeof type == 'object') {
+      json = {};
+    } else {
+      json = "";
+    }
+  }
+  _(type).keys().forEach(function(prop){
+    var propType = type[prop];
+    var t = "";
+    if (propType.name) {
+      t = propType.name;
+    } else if (propType.length != undefined) {
+      t = 'Array';
+    } else {
+      t = 'Object';
+    }
+    // Test json member type
+    var tjson = typeof json[prop];
+    if (~['Array', 'Object'].indexOf(t)) {
+      if (tjson == 'object') {
+        tjson = json[prop].length == undefined ? 'Object' : 'Array';
+      }
+    }
+    // Check coherence & alter member if needed
+    if (!_(json[prop]).isNull() && t.toLowerCase() != tjson.toLowerCase()) {
+      try {
+        if (t == "String" || t == "Number") {
+          var s = json[prop] == undefined ? '' : json[prop];
+          eval('json[prop] = new ' + t + '(' + s + ').valueOf()');
+        }
+        else {
+          eval('json[prop] = new ' + t + '()');
+        }
+      } catch (ex) {
+        eval('json[prop] = new ' + t + '()');
+      }
+    }
+    // Arrays
+    if (t == 'Array') {
+      var subt = t[0];
+      json[prop].forEach(function(item){
+        if (subt == "String" || subt == "Number")
+          eval('item = new ' + t + '(' + (json[prop] + '') + ').valueOf()');
+        else
+          sanitize(item, subt);
+      });
+    }
+    // Recursivity
+    if (t == 'Object') {
+      json[prop] = sanitize(json[prop], type[prop]);
+    }
+  });
+  return json;
+}
+
+var ResultTypes = {};
+ResultTypes.Peer = {
+  "version": String,
+  "currency": String,
+  "fingerprint": String,
+  "endpoints": [String],
+  "signature": String
+};
+ResultTypes.Merkle = {
+  "depth": Number,
+  "nodesCount": Number,
+  "leavesCount": Number,
+  "root": String
+};
+ResultTypes.MerkleWithLeaves = {
+  "depth": Number,
+  "nodesCount": Number,
+  "leavesCount": Number,
+  "root": String,
+  "leaves": [String]
+};
+ResultTypes.MerkleWithLeaf = {
+  "depth": Number,
+  "nodesCount": Number,
+  "leavesCount": Number,
+  "root": String,
+  "leaf": {
+    "hash": String,
+    "value": {}
+  }
+};
+ResultTypes.Stream = {
+  "peers": [String]
+};
+ResultTypes.Amendment = {
+  "version": String,
+  "currency": String,
+  "number": Number,
+  "generated": Number,
+  "previousHash": String,
+  "dividend": String,
+  "votersRoot": String,
+  "votersCount": Number,
+  "votersChanges": [String],
+  "membersRoot": String,
+  "membersCount": Number,
+  "membersChanges": [String],
+  "raw": String
+};
+ResultTypes.Signature = {
+  "issuer": String,
+  "signature": String,
+};
+ResultTypes.AmendmentIndex = {
+  "amendments": {}
+};
+ResultTypes.Transaction = {
+  "raw": String,
+  "transaction":
+  {
+    "signature": String,
+    "version": Number,
+    "currency": String,
+    "sender": String,
+    "number": Number,
+    "previousHash": String,
+    "recipient": String,
+    "coins": [String],
+    "comment": String
+  }
+};
+ResultTypes.TransactionList = {
+  "transactions": [ResultTypes.Transaction]
+};
+ResultTypes.Parameters = {
+  "AMStart": Number,
+  "AMFrequency": Number,
+  "UDFrequency": Number,
+  "UD0": Number,
+  "UDPercent": Number,
+  "CoinAlgo": String,
+  "Consensus": Number,
+  "MSExpires": Number,
+  "VTExpires": Number
+};
+ResultTypes.CoinList = {
+  "coins": [String]
+};
+ResultTypes.CoinOwning = {
+  "coinid": String,
+  "owner": String,
+  "transaction": ResultTypes.Transaction
+};
+ResultTypes.CoinOwningHistory = {
+  "history": [ResultTypes.CoinOwning]
+};
+ResultTypes.Membership = {
+  "signature": String,
+  "membership": {
+    "version": String,
+    "currency": String,
+    "issuer": String,
+    "membership": String,
+    "sigDate": Number,
+    "raw": String
+  }
+};
+ResultTypes.MembershipHistory = {
+  "memberships": [ResultTypes.Membership]
+};
+ResultTypes.Voting = {
+  "signature": String,
+  "voting": {
+    "version": String,
+    "currency": String,
+    "issuer": String,
+    "sigDate": Number,
+    "raw": String
+  }
+};
+ResultTypes.VotingHistory = {
+  "votings": [ResultTypes.Voting]
+};
+ResultTypes.Vote = {
+  "issuer": String,
+  "signature": String,
+  "amendment": ResultTypes.Amendment
+};
+ResultTypes.Forward = {
+  "version": String,
+  "currency": String,
+  "from": String,
+  "to": String,
+  "forward": String,
+  "keys": [String]
+};
+ResultTypes.Wallet = {
+  "signature": String,
+  "entry": {
+    "version": String,
+    "currency": String,
+    "fingerprint": String,
+    "requiredTrusts": Number,
+    "hosters": [String],
+    "trusts": [String]
+  }
+};
+ResultTypes.Status = {
+  "version": String,
+  "currency": String,
+  "status": String
 };

@@ -41,7 +41,8 @@
     "mocha": "",
     "should": "",
     "sha1": "",
-    "supertest": ""
+    "supertest": "",
+    "nock": "~0.31.0"
   },
   "bin": {
     "ucoin": "./bin/ucoin.sh"
