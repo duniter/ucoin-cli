@@ -45,7 +45,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     all: function () {
       var opts = arguments.length == 1 ? {} : arguments[0];
       var done = arguments.length == 1 ? arguments[0] : arguments[1];
-      dealMerkle('/pks/all', opts, done);
+      dealMerkle(ResultTypes.PublicKey, '/pks/all', opts, done);
     }
   }
 
@@ -705,6 +705,7 @@ function sanitize (json, type) {
       json = "";
     }
   }
+
   _(type).keys().forEach(function(prop){
     var propType = type[prop];
     var t = "";
@@ -738,7 +739,7 @@ function sanitize (json, type) {
     }
     // Arrays
     if (t == 'Array') {
-      var subt = t[0];
+      var subt = propType[0];
       json[prop].forEach(function(item){
         if (subt == "String" || subt == "Number")
           eval('item = new ' + t + '(' + (json[prop] + '') + ').valueOf()');
@@ -755,6 +756,10 @@ function sanitize (json, type) {
 }
 
 var ResultTypes = {};
+ResultTypes.PublicKey = {
+  "fingerprint": String,
+  "pubkey": String
+};
 ResultTypes.Peer = {
   "version": String,
   "currency": String,
