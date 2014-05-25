@@ -429,7 +429,7 @@ program
     }
     var tx = fs.readFileSync(program.transaction, 'utf8');
     console.error(tx);
-    node.hdc.transactions.processs(tx, proxy(function (res) {
+    node.hdc.transactions.process(tx, proxy(function (res) {
       console.log("Posted transfer transaction");
     }));
     return;
@@ -513,8 +513,9 @@ program
         tx.comment = program.comment ? program.comment : '';
         tx.coins = [];
         // Find last transaction
-        node.hdc.transactions.sender.last(tx.sender, function (err, lastTx) {
-          if (!err && lastTx) {
+        node.hdc.transactions.sender.lasts(tx.sender, 1, function (err, txs) {
+          if (!err && txs && txs[0]) {
+            var lastTx = txs[0];
             var newTx = new hdc.Transaction();
             _(newTx).extend(lastTx);
             newTx.coins.sort();
