@@ -30,11 +30,10 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   this.pks = {
 
-    add: function (key, signature, done) {
+    add: function (key, done) {
       post('/pks/add', done)
       .form({
-        "keytext": key,
-        "keysign": signature
+        "keytext": key
       });
     },
 
@@ -214,6 +213,10 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         },
 
         lasts: function (fingerprint, number, from, done) {
+          if (arguments.length == 3) {
+            done = from;
+            from = undefined;
+          }
           if (from == undefined)
             getTransactionList('/hdc/transactions/sender/' + fingerprint + '/last/' + number, done);
           else
@@ -850,7 +853,7 @@ ResultTypes.CoinList = {
 ResultTypes.CoinOwning = {
   "coinid": String,
   "owner": String,
-  "transaction": ResultTypes.Transaction
+  "transaction": String
 };
 ResultTypes.CoinOwningHistory = {
   "history": [ResultTypes.CoinOwning]

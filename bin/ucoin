@@ -85,33 +85,16 @@ program
       return;
     }
     var key = fs.readFileSync(program.key, 'utf8');
-    var sign = null;
-    if(~key.indexOf('-----BEGIN PGP SIGNATURE-----')){
-      sign = key.substr(key.indexOf('-----BEGIN PGP SIGNATURE-----'));
-      key = key.substr(0, key.indexOf('-----BEGIN PGP SIGNATURE-----'));
-    }
-    if(~key.indexOf('-----BEGIN PGP MESSAGE-----')){
-      sign = key.substr(key.indexOf('-----BEGIN PGP MESSAGE-----'));
-      key = key.substr(0, key.indexOf('-----BEGIN PGP MESSAGE-----'));
-    }
-    else if(program.signature){
-      signature = fs.readFileSync(signature, 'utf8');
-    }
-    if(key && sign){
-      node.pks.add(key, sign, proxy(function (res) {
-        var name = res.key.name || '';
-        var comment = res.key.comment ? ' (' + res.key.comment + ')' : '';
-        var email = res.key.email ? ' <' + res.key.email + '>' : '';
-        console.log("Posted key '" + res.key.fingerprint + "' of " + name + comment + email);
+    if(key){
+      node.pks.add(key, proxy(function (res) {
+        var name = res.name || '';
+        var comment = res.comment ? ' (' + res.comment + ')' : '';
+        var email = res.email ? ' <' + res.email + '>' : '';
+        console.log("Posted key '" + res.fingerprint + "' of " + name + comment + email);
       }));
     }
     else{
-      if(!key){
-        console.error("Missing key in given file.");
-      }
-      if(!sign){
-        console.error("Missing signature in given file.");
-      }
+      console.error("Missing key in given file.");
     }
     return;
   }));
@@ -428,7 +411,6 @@ program
       return;
     }
     var tx = fs.readFileSync(program.transaction, 'utf8');
-    console.error(tx);
     node.hdc.transactions.process(tx, proxy(function (res) {
       console.log("Posted transfer transaction");
     }));
@@ -513,7 +495,8 @@ program
         tx.comment = program.comment ? program.comment : '';
         tx.coins = [];
         // Find last transaction
-        node.hdc.transactions.sender.lasts(tx.sender, 1, function (err, txs) {
+        node.hdc.transactions.sender.lasts(tx.sender, 1, function (err, res) {
+          var txs = res.transactions;
           if (!err && txs && txs[0]) {
             var lastTx = txs[0];
             var newTx = new hdc.Transaction();
@@ -533,6 +516,7 @@ program
             if (!err) {
               var line = json.coinid;
               if (json.transaction) {
+                console.log(json.transaction);
                 line += ':' + json.transaction;
               }
               tx.coins.push(line);

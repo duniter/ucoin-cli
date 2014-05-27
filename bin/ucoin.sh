@@ -533,7 +533,6 @@ case "$cmd" in
     echo "Issuer: $fpr" >> ms.ucoin.tmp
     echo "Date: $date" >> ms.ucoin.tmp
     echo "Membership: IN" >> ms.ucoin.tmp
-    cat ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
     $ucoin update-membership --membership ms.ucoin.tmp.asc
     rm ms.ucoin.tmp
@@ -601,7 +600,7 @@ case "$cmd" in
       echo "Requires -u option."
       exit 1
     fi
-    sign "gpg -a --export $user"
+    gpg -a --export $user
     ;;
 
   forge-join)
