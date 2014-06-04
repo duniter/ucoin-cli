@@ -65,7 +65,7 @@ nock('http://localhost:8888')
   .get('/registry/community/voters/LMN/history').reply(200, "No JSON data")
   .get('/registry/amendment').reply(200, "No JSON data")
   .get('/registry/amendment/4').reply(200, "No JSON data")
-  .get('/registry/amendment/4/vote').reply(200, "No JSON data")
+  .get('/registry/amendment/4/AnyKey/vote').reply(200, "No JSON data")
 ;
 
 before(function (done) {
@@ -261,8 +261,8 @@ describe('/network', function () {
     }, done));
   });
 
-  it ('/registry/amendment/4/vote should return a vote', function (done) {
-    node.registry.amendment.vote(4, noErrorResult(function(json) {
+  it ('/registry/amendment/4/AnyKey/vote should return a vote', function (done) {
+    node.registry.amendment.vote(4, 'AnyKey', noErrorResult(function(json) {
       isVote(json);
     }, done));
   });

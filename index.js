@@ -303,8 +303,28 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         getAmendment('/registry/amendment/' + number, done);
       },
 
-      vote: function (number, done) {
-        getVote('/registry/amendment/' + number + '/vote', done);
+      membersIn: function (number, algo, done) {
+        dealMerkle(ResultTypes.Membership, '/registry/amendment/' + number + '/' + algo + '/members/in', opts, done);
+      },
+
+      membersOut: function (number, algo, done) {
+        dealMerkle(ResultTypes.Membership, '/registry/amendment/' + number + '/' + algo + '/members/out', opts, done);
+      },
+
+      votersIn: function (number, algo, done) {
+        dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/in', opts, done);
+      },
+
+      votersOut: function (number, algo, done) {
+        dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/out', opts, done);
+      },
+
+      flow: function (number, algo, done) {
+        getVote('/registry/amendment/' + number + '/' + algo + '/vote', done);
+      },
+
+      vote: function (number, algo, done) {
+        getVote('/registry/amendment/' + number + '/' + algo + '/vote', done);
       }
     }
   };
