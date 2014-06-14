@@ -320,7 +320,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       },
 
       flow: function (number, algo, done) {
-        getVote('/registry/amendment/' + number + '/' + algo + '/vote', done);
+        getVote('/registry/amendment/' + number + '/' + algo + '/flow', done);
       },
 
       vote: function (number, algo, done) {
