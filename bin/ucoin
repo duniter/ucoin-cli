@@ -143,9 +143,9 @@ program
   }));
 
 program
-  .command('am-proposed')
-  .description('View currently proposed next amendment.')
-  .action(connect(function (node) {
+  .command('am-initial [currency] [community]')
+  .description('View initially proposed AM0 amendment.')
+  .action(connect(function (currency, community, node) {
     async.waterfall([
       function(next){
         node.hdc.amendments.current(function (err, res) {
@@ -159,16 +159,37 @@ program
         });
       },
       function (nextNumber, next){
-        node.registry.amendment.proposed(parseInt(nextNumber) + 1, next);
+        node.registry.parameters(next);
       },
-    ], function (err, res) {
+    ], function (err, params) {
       if (err) {
         console.error(err);
         process.exit(1);
         return;
       }
-      var proposed = new hdc.Amendment(res.raw);
-      console.log(proposed.getRaw());
+      var members = community.split(';')[0].split(':').sort();
+      var voters = community.split(';')[1].split(':').sort();
+      var membersTree = merkle(members, 'sha1').process();
+      var votersTree = merkle(voters, 'sha1').process();
+      var raw = "Version: 1\r\n" +
+      "Currency: " + currency  + "\r\n" +
+      "Number: 0\r\n" +
+      "GeneratedOn: " + params.AMStart + "\r\n" +
+      "NextRequiredVotes: " + Math.ceil(params.Consensus*voters.length) + "\r\n" +
+      "MembersRoot: " +  membersTree.root() + "\r\n" +
+      "MembersCount: " +  members.length + "\r\n" +
+      "MembersChanges:\r\n";
+      members.forEach(function(fpr){
+        raw += "+" + fpr + "\r\n";
+      });
+      raw += "" +
+      "VotersRoot: " +  votersTree.root() + "\r\n" +
+      "VotersCount: " +  voters.length + "\r\n" +
+      "VotersChanges:\r\n";
+      voters.forEach(function(fpr){
+        raw += "+" + fpr + "\r\n";
+      });
+      console.log(raw);
     });
     return;
   }));
@@ -430,6 +451,23 @@ program
       console.log("Posted vote for Amendment #" + res.amendment.number);
     }));
     return;
+  }));
+
+program
+  .command('msvt-trailer')
+  .description('Get membership & voting trailers.')
+  .action(connect(function (node) {
+    async.waterfall([
+      function (next){
+        node.hdc.amendments.current(next);
+      },
+      function (res, next){
+        var hash = sha1(res.raw.unix2dos()).toUpperCase();
+        var numb = res.number;
+        console.log("AmendmentNumber: " + numb);
+        console.log("AmendmentHash: " + hash);
+      },
+    ]);
   }));
 
 program

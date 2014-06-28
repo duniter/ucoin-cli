@@ -25,7 +25,7 @@ cat > /dev/stderr <<-EOF
   Requiring -u option:
 
     vote-current    Send a vote for currently promoted amendment
-    vote-proposed   Send a vote for currently proposed amendment
+    vote-initial    Send a vote for initial amendment (AM0)
 
     host-(add|rm)   (Add|Remove) given key fingerprint to hosts managing transactions of key -u
     trust-(add|rm)  (Add|Remove) given key fingerprint to hosts key -u trust for receiving transactions
@@ -271,7 +271,7 @@ esac
 
 case "$cmd" in
 
-  send-pubkey|wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-proposed|vote-proposed|vote-current)
+  send-pubkey|wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-initial|vote-initial|vote-current)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -410,8 +410,8 @@ case "$cmd" in
     fi
     ;;
   
-  vote-proposed)
-    $ucoin am-proposed > am.ucoin.tmp
+  vote-initial)
+    $ucoin am-initial $2 $3 > am.ucoin.tmp
     amendment=`cat am.ucoin.tmp`
     rm am.ucoin.tmp
     echo "------------------------"
@@ -533,6 +533,7 @@ case "$cmd" in
     echo "Issuer: $fpr" >> ms.ucoin.tmp
     echo "Date: $date" >> ms.ucoin.tmp
     echo "Membership: IN" >> ms.ucoin.tmp
+    $ucoin msvt-trailer >> ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
     $ucoin update-membership --membership ms.ucoin.tmp.asc
     rm ms.ucoin.tmp
@@ -547,6 +548,7 @@ case "$cmd" in
     echo "Issuer: $fpr" >> ms.ucoin.tmp
     echo "Date: $date" >> ms.ucoin.tmp
     echo "Membership: IN" >> ms.ucoin.tmp
+    $ucoin msvt-trailer >> ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
     $ucoin update-membership --membership ms.ucoin.tmp.asc
     rm ms.ucoin.tmp
@@ -561,6 +563,7 @@ case "$cmd" in
     echo "Issuer: $fpr" >> ms.ucoin.tmp
     echo "Date: $date" >> ms.ucoin.tmp
     echo "Membership: OUT" >> ms.ucoin.tmp
+    $ucoin msvt-trailer >> ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
     $ucoin update-membership --membership ms.ucoin.tmp.asc
     rm ms.ucoin.tmp
@@ -578,6 +581,7 @@ case "$cmd" in
     echo "Registry: VOTING" >> voting.ucoin.tmp
     echo "Issuer: $fpr" >> voting.ucoin.tmp
     echo "Date: $date" >> voting.ucoin.tmp
+    $ucoin msvt-trailer >> voting.ucoin.tmp
     sign "cat voting.ucoin.tmp" > voting.ucoin.tmp.asc
     $ucoin update-voting --voting voting.ucoin.tmp.asc
     rm voting.ucoin.tmp
