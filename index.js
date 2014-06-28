@@ -303,19 +303,35 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         getAmendment('/registry/amendment/' + number, done);
       },
 
-      membersIn: function (number, algo, done) {
+      membersIn: function () {
+        var number = arguments[0];
+        var algo = arguments[1];
+        var opts = arguments.length == 3 ? {} : arguments[2];
+        var done = arguments.length == 3 ? arguments[2] : arguments[3];
         dealMerkle(ResultTypes.Membership, '/registry/amendment/' + number + '/' + algo + '/members/in', opts, done);
       },
 
-      membersOut: function (number, algo, done) {
+      membersOut: function () {
+        var number = arguments[0];
+        var algo = arguments[1];
+        var opts = arguments.length == 3 ? {} : arguments[2];
+        var done = arguments.length == 3 ? arguments[2] : arguments[3];
         dealMerkle(ResultTypes.Membership, '/registry/amendment/' + number + '/' + algo + '/members/out', opts, done);
       },
 
-      votersIn: function (number, algo, done) {
+      votersIn: function () {
+        var number = arguments[0];
+        var algo = arguments[1];
+        var opts = arguments.length == 3 ? {} : arguments[2];
+        var done = arguments.length == 3 ? arguments[2] : arguments[3];
         dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/in', opts, done);
       },
 
-      votersOut: function (number, algo, done) {
+      votersOut: function () {
+        var number = arguments[0];
+        var algo = arguments[1];
+        var opts = arguments.length == 3 ? {} : arguments[2];
+        var done = arguments.length == 3 ? arguments[2] : arguments[3];
         dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/out', opts, done);
       },
 
