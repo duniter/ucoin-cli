@@ -335,8 +335,8 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
         dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/out', opts, done);
       },
 
-      flow: function (number, algo, done) {
-        getVote('/registry/amendment/' + number + '/' + algo + '/flow', done);
+      statement: function (number, algo, done) {
+        getVote('/registry/amendment/' + number + '/' + algo + '/statement', done);
       },
 
       vote: function (number, algo, done) {
