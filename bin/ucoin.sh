@@ -351,7 +351,8 @@ case "$cmd" in
     ;;
   
   wallet)
-    echo "Date: $date"
+    echo -n "Date: "
+    $ucoin utc-timestamp
     echo -n "RequiredTrusts: "
     cat $TRUSTS_MIN_FILE
     echo "Hosters:"
@@ -366,7 +367,8 @@ case "$cmd" in
     echo "Version: 1" > $PUB_FILE
     echo "Currency: $currency" >> $PUB_FILE
     echo "Key: $fpr" >> $PUB_FILE
-    echo "Date: $date" >> $PUB_FILE
+    echo -n "Date: " >> $PUB_FILE
+    $ucoin utc-timestamp >> $PUB_FILE
     echo -n "RequiredTrusts: " >> $PUB_FILE
     cat $TRUSTS_MIN_FILE >> $PUB_FILE
     echo "Hosters:" >> $PUB_FILE
@@ -531,7 +533,8 @@ case "$cmd" in
     echo "Currency: $currency" >> ms.ucoin.tmp
     echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
     echo "Issuer: $fpr" >> ms.ucoin.tmp
-    echo "Date: $date" >> ms.ucoin.tmp
+    echo -n "Date: " >> ms.ucoin.tmp
+    $ucoin utc-timestamp >> ms.ucoin.tmp
     echo "Membership: IN" >> ms.ucoin.tmp
     $ucoin msvt-trailer >> ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
@@ -546,7 +549,8 @@ case "$cmd" in
     echo "Currency: $currency" >> ms.ucoin.tmp
     echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
     echo "Issuer: $fpr" >> ms.ucoin.tmp
-    echo "Date: $date" >> ms.ucoin.tmp
+    echo -n "Date: " >> ms.ucoin.tmp
+    $ucoin utc-timestamp >> ms.ucoin.tmp
     echo "Membership: IN" >> ms.ucoin.tmp
     $ucoin msvt-trailer >> ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
@@ -561,7 +565,8 @@ case "$cmd" in
     echo "Currency: $currency" >> ms.ucoin.tmp
     echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
     echo "Issuer: $fpr" >> ms.ucoin.tmp
-    echo "Date: $date" >> ms.ucoin.tmp
+    echo -n "Date: " >> ms.ucoin.tmp
+    $ucoin utc-timestamp >> ms.ucoin.tmp
     echo "Membership: OUT" >> ms.ucoin.tmp
     $ucoin msvt-trailer >> ms.ucoin.tmp
     sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
@@ -580,7 +585,8 @@ case "$cmd" in
     echo "Currency: $currency" >> voting.ucoin.tmp
     echo "Registry: VOTING" >> voting.ucoin.tmp
     echo "Issuer: $fpr" >> voting.ucoin.tmp
-    echo "Date: $date" >> voting.ucoin.tmp
+    echo -n "Date: " >> voting.ucoin.tmp
+    $ucoin utc-timestamp >> voting.ucoin.tmp
     $ucoin msvt-trailer >> voting.ucoin.tmp
     sign "cat voting.ucoin.tmp" > voting.ucoin.tmp.asc
     $ucoin update-voting --voting voting.ucoin.tmp.asc

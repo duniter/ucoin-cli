@@ -471,6 +471,14 @@ program
   }));
 
 program
+  .command('utc-timestamp')
+  .description('Get current timestamp for UTC+0 timezone.')
+  .action(function () {
+    var now = new Date();
+    console.log(Math.floor(now.getTime()/1000) + now.getTimezoneOffset()*60);
+  });
+
+program
   .command('update-membership')
   .description('Send membership request.')
   .action(connect(function (node) {
