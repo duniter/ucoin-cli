@@ -31,7 +31,7 @@
     "commander": "",
     "async": "",
     "sha1": "",
-    "merkle": "",
+    "merkle": "~0.1.0",
     "hdc": "~0.7.0",
     "cli-table": "*",
     "openpgp": "0.5.1",
