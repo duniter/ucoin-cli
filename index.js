@@ -46,6 +46,17 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
       var done = arguments.length == 1 ? arguments[0] : arguments[1];
       dealMerkle(ResultTypes.PublicKey, '/pks/all', opts, done);
     }
+  };
+
+  this.keychain = {
+
+    membership: function (ms, done) {
+      var sigIndex = ms.indexOf("-----BEGIN");
+      postMembership('/keychain/membership', {
+        "membership": ms.substring(0, sigIndex),
+        "signature": ms.substring(sigIndex)
+      }, done);
+    },
   }
 
   this.network = {
@@ -234,113 +245,6 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
       view: function (hash, number, done) {
         getTransaction('/hdc/transactions/sender/' + hash + '/view/' + number, done);
-      }
-    }
-  };
-
-  this.registry = {
-
-    parameters: function (done) {
-      getParameters('/registry/parameters', done);
-    },
-
-    community: {
-      
-      members: {
-
-        get: function (ms, done) {
-          var opts = arguments.length == 1 ? {} : arguments[0];
-          var done = arguments.length == 1 ? arguments[0] : arguments[1];
-          dealMerkle(ResultTypes.Membership, '/registry/community/members', opts, done);
-        },
-
-        post: function (ms, done) {
-          var sigIndex = ms.indexOf("-----BEGIN");
-          postMembership('/registry/community/members', {
-            "membership": ms.substring(0, sigIndex),
-            "signature": ms.substring(sigIndex)
-          }, done);
-        },
-
-        current: function (fingerprint, done) {
-          getMembership('/registry/community/members/' + fingerprint + '/current', done);
-        },
-
-        history: function (fingerprint, done) {
-          getMembershipHistory('/registry/community/members/' + fingerprint + '/history', done);
-        }
-      },
-      
-      voters: {
-
-        get: function (ms, done) {
-          var opts = arguments.length == 1 ? {} : arguments[0];
-          var done = arguments.length == 1 ? arguments[0] : arguments[1];
-          dealMerkle(ResultTypes.Voting, '/registry/community/voters', opts, done);
-        },
-
-        post: function (voting, done) {
-          var sigIndex = voting.indexOf("-----BEGIN");
-          postVoting('/registry/community/voters', {
-            "voting": voting.substring(0, sigIndex),
-            "signature": voting.substring(sigIndex)
-          }, done);
-        },
-
-        current: function (fingerprint, done) {
-          getVoting('/registry/community/voters/' + fingerprint + '/current', done);
-        },
-
-        history: function (fingerprint, done) {
-          getVotingHistory('/registry/community/voters/' + fingerprint + '/history', done);
-        }
-      }
-    },
-
-    amendment: {
-
-      proposed: function (number, done) {
-        getAmendment('/registry/amendment/' + number, done);
-      },
-
-      membersIn: function () {
-        var number = arguments[0];
-        var algo = arguments[1];
-        var opts = arguments.length == 3 ? {} : arguments[2];
-        var done = arguments.length == 3 ? arguments[2] : arguments[3];
-        dealMerkle(ResultTypes.Membership, '/registry/amendment/' + number + '/' + algo + '/members/in', opts, done);
-      },
-
-      membersOut: function () {
-        var number = arguments[0];
-        var algo = arguments[1];
-        var opts = arguments.length == 3 ? {} : arguments[2];
-        var done = arguments.length == 3 ? arguments[2] : arguments[3];
-        dealMerkle(ResultTypes.Membership, '/registry/amendment/' + number + '/' + algo + '/members/out', opts, done);
-      },
-
-      votersIn: function () {
-        var number = arguments[0];
-        var algo = arguments[1];
-        var opts = arguments.length == 3 ? {} : arguments[2];
-        var done = arguments.length == 3 ? arguments[2] : arguments[3];
-        dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/in', opts, done);
-      },
-
-      votersOut: function () {
-        var number = arguments[0];
-        var algo = arguments[1];
-        var opts = arguments.length == 3 ? {} : arguments[2];
-        var done = arguments.length == 3 ? arguments[2] : arguments[3];
-        dealMerkle(ResultTypes.Voting, '/registry/amendment/' + number + '/' + algo + '/voters/out', opts, done);
-      },
-
-      statement: function (number, algo, done) {
-        getVote('/registry/amendment/' + number + '/' + algo + '/statement', done);
-      },
-
-      vote: function (number, algo, done) {
-        getVote('/registry/amendment/' + number + '/' + algo + '/vote', done);
       }
     }
   };

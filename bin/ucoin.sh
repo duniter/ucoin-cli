@@ -41,17 +41,15 @@ cat > /dev/stderr <<-EOF
                     If [file] is not provided, it is read from STDIN.
                     Note: [file] may be forged using 'forge-*' commands.
 
-    join            Send membership request to either join, stay in, or leave the community.
-    actualize
-    leave         
-    
-    voter           Send a voting request to be taken in account as new voter.
+    join            Send membership request to either join or leave the community.
+    leave
 
   Options:
 
     -s server     uCoin server to look data in [default 'localhost']
     -p port       uCoin server port [default '8081']
     -u user       PGP key to use for signature
+    -m currency   Currency name
     -c            Responds 'yes' on confirmation questions.
     -v            Verbose mode
     -h            Help
@@ -67,7 +65,7 @@ SERVER=
 PORT=
 user=
 dividend=
-mincoin=
+currency=
 votes=
 timestamp=
 confirm=true
@@ -92,7 +90,7 @@ while getopts :hs:p:u:t:d:m:n:vDcC OPT; do
       dividend="$OPTARG"
       ;;
     m)
-      mincoin="$OPTARG"
+      currency="$OPTARG"
       ;;
     n)
       votes="$OPTARG"
@@ -271,7 +269,7 @@ esac
 
 case "$cmd" in
 
-  send-pubkey|wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|vote|join|actualize|leave|voter|vote-initial|vote-initial|vote-current)
+  send-pubkey|wallet|pub-wallet|host-add|host-rm|trust-min|trust-add|trust-rm|forge-transfer|clist|cget|join|leave)
     if [ -z $user ]; then
       echo "Requires -u option."
       exit 1
@@ -279,6 +277,16 @@ case "$cmd" in
     fpr=`gpg --fingerprint $user | grep = | sed -e "s/.*= //g" | sed -e "s/ //g"`
 
     if [ -z $fpr ]; then
+      exit 1
+    fi
+    ;;
+esac
+
+case "$cmd" in
+
+  join|leave)
+    if [ -z $currency ]; then
+      echo "Requires -m option."
       exit 1
     fi
     ;;
@@ -528,35 +536,20 @@ case "$cmd" in
     ;;
   
   join)
-    currency=`$ucoin currency`
-    echo "Version: 1" > ms.ucoin.tmp
-    echo "Currency: $currency" >> ms.ucoin.tmp
-    echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
-    echo "Issuer: $fpr" >> ms.ucoin.tmp
-    echo -n "Date: " >> ms.ucoin.tmp
-    $ucoin utc-timestamp >> ms.ucoin.tmp
-    echo "Membership: IN" >> ms.ucoin.tmp
-    $ucoin msvt-trailer >> ms.ucoin.tmp
-    sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
-    $ucoin update-membership --membership ms.ucoin.tmp.asc
-    rm ms.ucoin.tmp
-    rm ms.ucoin.tmp.asc
-    ;;
-  
-  actualize)
-    currency=`$ucoin currency`
-    echo "Version: 1" > ms.ucoin.tmp
-    echo "Currency: $currency" >> ms.ucoin.tmp
-    echo "Registry: MEMBERSHIP" >> ms.ucoin.tmp
-    echo "Issuer: $fpr" >> ms.ucoin.tmp
-    echo -n "Date: " >> ms.ucoin.tmp
-    $ucoin utc-timestamp >> ms.ucoin.tmp
-    echo "Membership: IN" >> ms.ucoin.tmp
-    $ucoin msvt-trailer >> ms.ucoin.tmp
-    sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
-    $ucoin update-membership --membership ms.ucoin.tmp.asc
-    rm ms.ucoin.tmp
-    rm ms.ucoin.tmp.asc
+    userid=`gpg --list-key $user | grep uid | tail -n1 | sed -e "s/uid\s\+//"`
+    if [ $? -eq 0 ]; then
+      echo "Version: 1" > ms.ucoin.tmp
+      echo "Currency: $currency" >> ms.ucoin.tmp
+      echo "Issuer: $fpr" >> ms.ucoin.tmp
+      echo -n "Date: " >> ms.ucoin.tmp
+      $ucoin utc-timestamp >> ms.ucoin.tmp
+      echo "Membership: IN" >> ms.ucoin.tmp
+      echo "UserID: $userid" >> ms.ucoin.tmp
+      sign "cat ms.ucoin.tmp" > ms.ucoin.tmp.asc
+      $ucoin update-membership --membership ms.ucoin.tmp.asc
+      rm ms.ucoin.tmp
+      rm ms.ucoin.tmp.asc
+    fi
     ;;
   
   leave)
@@ -573,25 +566,6 @@ case "$cmd" in
     $ucoin update-membership --membership ms.ucoin.tmp.asc
     rm ms.ucoin.tmp
     rm ms.ucoin.tmp.asc
-    ;;
-  
-  voter)
-    currency=`$ucoin currency`
-    key=$2
-    if [[ -z $key ]]; then
-      key=$fpr
-    fi
-    echo "Version: 1" > voting.ucoin.tmp
-    echo "Currency: $currency" >> voting.ucoin.tmp
-    echo "Registry: VOTING" >> voting.ucoin.tmp
-    echo "Issuer: $fpr" >> voting.ucoin.tmp
-    echo -n "Date: " >> voting.ucoin.tmp
-    $ucoin utc-timestamp >> voting.ucoin.tmp
-    $ucoin msvt-trailer >> voting.ucoin.tmp
-    sign "cat voting.ucoin.tmp" > voting.ucoin.tmp.asc
-    $ucoin update-voting --voting voting.ucoin.tmp.asc
-    rm voting.ucoin.tmp
-    rm voting.ucoin.tmp.asc
     ;;
 
   forge-transfer)

@@ -11,6 +11,9 @@ var merkle  = require('merkle');
 var Table   = require('cli-table');
 var stdinData = '';
 
+// Consts
+var NO_AUTH = false;
+
 // Default values
 program.host = "localhost";
 program.port = "8081";
@@ -454,23 +457,6 @@ program
   }));
 
 program
-  .command('msvt-trailer')
-  .description('Get membership & voting trailers.')
-  .action(connect(function (node) {
-    async.waterfall([
-      function (next){
-        node.hdc.amendments.current(next);
-      },
-      function (res, next){
-        var hash = sha1(res.raw.unix2dos()).toUpperCase();
-        var numb = res.number;
-        console.log("AmendmentNumber: " + numb);
-        console.log("AmendmentHash: " + hash);
-      },
-    ]);
-  }));
-
-program
   .command('utc-timestamp')
   .description('Get current timestamp for UTC+0 timezone.')
   .action(function () {
@@ -481,29 +467,14 @@ program
 program
   .command('update-membership')
   .description('Send membership request.')
-  .action(connect(function (node) {
+  .action(connect(NO_AUTH, function (node) {
     if(!program.membership){
       console.error("Requires --membership parameter");
       return;
     }
     var vote = fs.readFileSync(program.membership, 'utf8');
-    node.registry.community.members.post(vote, proxy(function (res) {
+    node.keychain.membership(vote, proxy(function (res) {
       console.log("Posted membership " + res.membership.membership + " for key " + res.membership.issuer);
-    }));
-    return;
-  }));
-
-program
-  .command('update-voting')
-  .description('Send voting request.')
-  .action(connect(function (node) {
-    if(!program.voting){
-      console.error("Requires --voting parameter");
-      return;
-    }
-    var vote = fs.readFileSync(program.voting, 'utf8');
-    node.registry.community.voters.post(vote, proxy(function (res) {
-      console.log("Posted voting key " + res.voting.votingKey + " for member " + res.voting.issuer);
     }));
     return;
   }));
@@ -763,10 +734,14 @@ program
 
 program.parse(process.argv);
 
-function connect(callback) {
+function connect(auth, callback) {
+  if (arguments.length == 1) {
+    callback = auth;
+    auth = true;
+  }
   return function () {
     var cbArgs = arguments;
-    vucoin(program.host, program.port, true, function (err, node) {
+    vucoin(program.host, program.port, auth, function (err, node) {
       if(err){
         console.error(err);
         return;
