@@ -50,12 +50,24 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   this.keychain = {
 
+    parameters: function (done) {
+      get('/keychain/parameters', done);
+    },
+
     membership: function (ms, done) {
       var sigIndex = ms.indexOf("-----BEGIN");
       postMembership('/keychain/membership', {
         "membership": ms.substring(0, sigIndex),
         "signature": ms.substring(sigIndex)
       }, done);
+    },
+
+    current: function (done) {
+      getKeyblock('/keychain/current', done);
+    },
+
+    keyblock: function (number, done) {
+      getKeyblock('/keychain/keyblock/' + number, done);
     },
   }
 
@@ -322,6 +334,12 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   function getWallet (url, callback) {
     get(url, function (err, res, body) {
       callback(err, sanitize(res, ResultTypes.Wallet));
+    });
+  }
+
+  function getKeyblock (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Keyblock));
     });
   }
 
@@ -735,6 +753,21 @@ ResultTypes.MerkleWithLeaf = {
 };
 ResultTypes.Stream = {
   "peers": [String]
+};
+ResultTypes.Keyblock = {
+  "version": Number,
+  "nonce": Number,
+  "number": Number,
+  "timestamp": Number,
+  "membersCount": Number,
+  "currency": String,
+  "membersRoot": String,
+  "signature": String,
+  "hash": String,
+  "previousHash": String,
+  "previousIssuer": String,
+  "membersChanges": [String],
+  "keysChanges": [Object]
 };
 ResultTypes.Amendment = {
   "version": String,
