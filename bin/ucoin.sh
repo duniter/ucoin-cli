@@ -536,7 +536,7 @@ case "$cmd" in
     ;;
   
   join)
-    userid=`gpg --list-key $user | grep uid | tail -n1 | sed -e "s/uid\s\+//"`
+    userid=`gpg --list-key $user | grep "uid.*udid2;c" | tail -n1 | sed -e "s/uid\s\+//"`
     if [ $? -eq 0 ]; then
       echo "Version: 1" > ms.ucoin.tmp
       echo "Currency: $currency" >> ms.ucoin.tmp
