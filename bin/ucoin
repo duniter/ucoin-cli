@@ -62,7 +62,7 @@ program
 
 program
   .command('self [uid]')
-  .description('Show remote pubkey in ASCII armored format.')
+  .description('Build self-certification.')
   .action(withKeyPair(function (pub, sec, uid) {
     var raw = "";
     async.waterfall([
@@ -81,6 +81,33 @@ program
         writeInHome("self", selfCert);
       else
         process.stdout.write(selfCert);
+    }));
+  }));
+
+program
+  .command('lookup [search]')
+  .description('Show remote pubkey in ASCII armored format.')
+  .action(withConnection(function (node, search) {
+    async.waterfall([
+      function (next){
+        node.wot.lookup(search, next);
+      },
+      function (res, next){
+        var matches = [];
+        res.results.forEach(function(pubres){
+          matches[pubres.pubkey] = [];
+          pubres.uids.forEach(function(uidres){
+            matches[pubres.pubkey].push(uidres.uid);
+          });
+        });
+        next(null, matches);
+      },
+    ], handleError(function (res) {
+      _(res).keys().forEach(function(pubkey){
+        res[pubkey].forEach(function(uid){
+          console.log(pubkey + ':' + uid);
+        });
+      });
     }));
   }));
 
@@ -785,7 +812,7 @@ function connect(auth, callback) {
   }
   return function () {
     var cbArgs = arguments;
-    vucoin(program.host, program.port, auth, function (err, node) {
+    vucoin(program.host, program.port, function (err, node) {
       if(err){
         console.error(err);
         return;
@@ -946,6 +973,23 @@ function withKeyPair (parameters, done) {
   });
 }
 
+function withConnection (parameters, done) {
+  if (arguments.length == 1) {
+    done = parameters;
+    parameters = [];
+  }
+  return withParams(['host', 'port'], function () {
+    var args = Array.prototype.slice.call(arguments);
+    vucoin(program.host, program.port, function (err, node) {
+      if (err) {
+        console.error(err);
+        process.exit(1);
+      }
+      done.apply(done, [node].concat(args));
+    });
+  });
+}
+
 function withParams (parameters, done) {
   return function () {
     var err = null;
@@ -958,7 +1002,6 @@ function withParams (parameters, done) {
       console.error(err);
       process.exit(1);
     }
-    // console.log(arguments);
     done.apply(done, arguments);
   };
 }

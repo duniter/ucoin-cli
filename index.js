@@ -3,30 +3,23 @@ var fs      = require('fs');
 var async   = require('async');
 var openpgp = require('openpgp');
 
-module.exports = function (host, port, authenticated, withSignature, intialized){
-  return new vuCoin(host, port, authenticated, withSignature, intialized);
+module.exports = function (host, port, intialized){
+  return new vuCoin(host, port, intialized);
 }
 
-function vuCoin(host, port, authenticated, withSignature, intialized){
+function vuCoin(host, port, intialized){
 
   var pubkeys = null;
 
-  if(typeof authenticated == 'function'){
-    intialized = authenticated;
-    authenticated = false;
-    withSignature = false;
-  }
-  if(typeof withSignature == 'function'){
-    intialized = withSignature;
-    withSignature = false;
-  }
-
-  if(withSignature && !authenticated){
-    throw new Error('Cannot give signature in unauthenticated mode');
-  }
-
   this.host = host;
   this.port = port;
+
+  this.wot = {
+
+    lookup: function (search, done) {
+      getLookup('/wot/lookup/' + encodeURIComponent(search), done);
+    }
+  };
 
   this.pks = {
 
@@ -301,12 +294,7 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
   }
 
   function requestHead(url) {
-    return authenticated ? {
-      "url": "http://" + server() + url,
-      "headers": {
-        "Accept": "multipart/msigned"
-      }
-    } : {
+    return {
       "url": "http://" + server() + url
     };
   }
@@ -317,6 +305,12 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
 
   function post(url, callback) {
     return require('request').post(requestHead(url), _(vucoin_result).partial(callback));
+  }
+
+  function getLookup (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Lookup));
+    });
   }
 
   function getPeer (url, callback) {
@@ -494,136 +488,14 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     if(err)
       done(err);
     else{
-      if(res.headers['content-type'] && res.headers['content-type'].match(/multipart\/msigned/)){
-        if(authenticated)
-          verifyResponse(res, body, done);
-        else{
-          var result = body;
-          done(null, result);
-        }
-      }
-      else{
-        errorCode(res, body, done);
-      }
+      handleResponse(res, body, done);
     }
   }
 
   // ====== Initialization ======
-  if(authenticated){
-    var that = this;
-    if(typeof authenticated != "string"){
-      require('request')('http://' + server() + '/network/pubkey', function (err, res, body) {
-        try{
-          if(err)
-            throw new Error(err);
-          pubkeys = openpgp.key.readArmored(body).keys;
-          intialized(null, that);
-        }
-        catch(ex){
-          intialized("Remote key could not be retrieved: " + ex);
-        }
-      });
-    }
-    else{
-      try{
-        if(err)
-          throw new Error(err);
-        pubkeys = openpgp.key.readArmored(authenticated).keys;
-        console.error("Public key imported.");
-        intialized(null, that);
-      }
-      catch(ex){
-        intialized("Bad key given.");
-      }
-    }
-  }
-  else intialized(null, this);
+  intialized(null, this);
 
-  function verifyResponse(res, body, done) {
-    var type = res.headers["content-type"];
-    if(type && type.match(/multipart\/msigned/)){
-      var boundaries = type.match(/boundary=([\w\d]*);/);
-      if(boundaries.length > 1){
-        var boundary = "--" + boundaries[1];
-        var index1 = body.indexOf(boundary);
-        var index2 = body.indexOf(boundary, index1 + boundary.length);
-        var index3 = body.indexOf(boundary, index2 + boundary.length);
-        var content = body.substring(index1 + boundary.length + '\r\n'.length, index2 - '\r\n'.length*1);
-        var signature = body.substring(boundary.length + '\r\n'.length + index2, index3 - '\r\n'.length*2);
-        var sigMessage = signature.substring(signature.lastIndexOf('-----BEGIN PGP'));
-        content = content.substring(content.indexOf('\r\n\r\n') + '\r\n'.length*2);
-        var verified = false;
-        try{
-          var clearSigned = toClearSign(content, sigMessage);
-          var clearTextMessage = openpgp.cleartext.readArmored(clearSigned);
-          var sigRes = openpgp.verifyClearSignedMessage(pubkeys, clearTextMessage);
-          if (sigRes.signatures && sigRes.signatures.length > 0) {
-            verified = sigRes.signatures[0].valid;
-          }
-        }
-        catch(ex){
-          err = ex.toString();
-          console.error('Exception during signature verification: ' + err);
-        }
-        if(verified){
-          errorCode(res, content, sigMessage, done);
-        }
-        else{
-          done("Signature verification failed for URL " + res.request.href);
-        }
-      }
-    }
-    else done("Non signed content.");
-  }
-
-  function toClearSign (data, signature) {
-    if (signature.match(/-----BEGIN PGP SIGNED MESSAGE-----/))
-      return signature
-    else {
-      var msg = '-----BEGIN PGP SIGNED MESSAGE-----\r\n' +
-              'Hash: SHA1\r\n' +
-              '\r\n' +
-              data.replace(/^-----/gm, '- -----') + '\r\n' +
-              signature + '\r\n';
-
-      var signatureAlgo = findSignatureAlgorithm(msg) || 2;
-      msg = msg.replace('Hash: SHA1', 'Hash: ' + hashAlgorithms[signatureAlgo.toString()]);
-
-      return msg;
-    }
-  }
-
-  function findSignatureAlgorithm (msg) {
-    var signatureAlgo = null;
-    var input = openpgp.armor.decode(msg);
-    if (input.type !== openpgp.enums.armor.signed) {
-      throw new Error('No cleartext signed message.');
-    }
-    var packetlist = new openpgp.packet.List();
-    packetlist.read(input.data);
-    packetlist.forEach(function(packet){
-      if (packet.tag == openpgp.enums.packet.signature) {
-        signatureAlgo = packet.hashAlgorithm;
-      }
-    });
-    return signatureAlgo;
-  }
-
-  var hashAlgorithms = {
-    '1': "MD5",
-    '2': "SHA1",
-    '3': "RIPEMD160",
-    '8': "SHA256",
-    '9': "SHA384",
-    '10': "SHA512",
-    '11': "SHA224"
-  };
-
-  function errorCode(res, body, signature, done) {
-    if(signature && !done){
-      done = signature;
-      signature = undefined;
-    }
+  function handleResponse(res, body, done) {
     var err;
     if(res.statusCode != 200){
       if(res.statusCode == 400)
@@ -639,23 +511,12 @@ function vuCoin(host, port, authenticated, withSignature, intialized){
     else{
       var result = body;
       try{ result = JSON.parse(body) } catch(ex) {}
-      if(withSignature)
-        done(null, result, withSignature ? signature : undefined);
-      else
-        done(null, result);
+      done(null, result, body);
     }
   }
 
   return this;
 }
-
-String.prototype.dos2unix = function(){
-  return this.replace(/\r\n/g, '\n');
-};
-
-String.prototype.unix2dos = function(){
-  return this.dos2unix().replace(/\n/g, '\r\n');
-};
 
 function sanitize (json, type) {
   // Return type is either a string or an object
@@ -720,6 +581,26 @@ var ResultTypes = {};
 ResultTypes.PublicKey = {
   "fingerprint": String,
   "pubkey": String
+};
+ResultTypes.Lookup = {
+  "partial": Boolean,
+  "results": [{
+    "pubkey": String,
+    "uids": [{
+      "uid": String,
+      "meta": {
+        "timestamp": Number
+      },
+      "self": String,
+      "others": [{
+        "pubkey": String,
+        "meta": {
+          "timestamp": Number
+        },
+        "signature": String
+      }]
+    }]
+  }]
 };
 ResultTypes.Peer = {
   "version": String,
