@@ -45,6 +45,7 @@ program
   .option('--salt <salt>', 'Salt string')
   .option('--passwd <password>', 'Password of the key')
   .option('--store', 'Store data instead of writing to sdout')
+  .option('--send', 'send data instead of writing to sdout')
 
 program
   .command('sec')
@@ -64,6 +65,27 @@ program
   .command('self [uid]')
   .description('Build self-certification.')
   .action(withKeyPair(function (pub, sec, uid) {
+    async.waterfall([
+      function (next){
+        if (uid) createSelfCert(pub, sec, uid, next);
+        else readSelfCert(next);
+      },
+    ], handleError(function (selfCert) {
+      if (program.store)
+        writeInHome("self", selfCert);
+      if (program.send)
+        withConnection(function (node) {
+          node.wot.add(base58.encode(pub), selfCert.split('\n').slice(1).join('\n'), function (err) {
+            if (err) console.error('Error:', err);
+            else console.log('Successfully sent');
+          })
+        })();
+      if (!program.send && !program.store)
+        process.stdout.write(selfCert);
+    }));
+  }));
+
+function createSelfCert (pub, sec, uid, done) {
     var raw = "";
     async.waterfall([
       function (next){
@@ -76,13 +98,12 @@ program
         raw += sig + '\n';
         next(null, raw);
       },
-    ], handleError(function (selfCert) {
-      if (program.store)
-        writeInHome("self", selfCert);
-      else
-        process.stdout.write(selfCert);
-    }));
-  }));
+    ], done);
+}
+
+function readSelfCert (done) {
+  done(null, readInHome('self'));
+}
 
 program
   .command('lookup [search]')
@@ -1012,6 +1033,15 @@ function writeInHome (fileName, content) {
   if (!fs.existsSync(ucoinPath))
     fs.mkdirSync(ucoinPath);
   fs.writeFileSync(ucoinPath + '/' + fileName, content, 'utf8');
+}
+
+function readInHome (fileName) {
+  var homePath = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+  var ucoinPath = homePath + '/.ucoin';
+  var filePath = homePath + '/.ucoin/' + fileName;
+  if (!fs.existsSync(ucoinPath + '/'))
+    fs.mkdirSync(ucoinPath);
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
 }
 
 String.prototype.trim = function(){

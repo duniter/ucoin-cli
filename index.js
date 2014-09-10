@@ -16,6 +16,14 @@ function vuCoin(host, port, intialized){
 
   this.wot = {
 
+    add: function (pubkey, self, done) {
+      post('/wot/add', done)
+      .form({
+        "pubkey": pubkey,
+        "self": self
+      });
+    },
+
     lookup: function (search, done) {
       getLookup('/wot/lookup/' + encodeURIComponent(search), done);
     }
