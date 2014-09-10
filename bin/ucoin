@@ -1,14 +1,17 @@
 #!/usr/bin/env node
-var request = require('request');
-var program = require('commander');
-var vucoin  = require('../index');
-var hdc     = require('hdc');
-var fs      = require('fs');
-var sha1    = require('sha1');
-var async   = require('async');
-var _       = require('underscore');
-var merkle  = require('merkle');
-var Table   = require('cli-table');
+var request   = require('request');
+var program   = require('commander');
+var vucoin    = require('../index');
+var hdc       = require('hdc');
+var fs        = require('fs');
+var sha1      = require('sha1');
+var async     = require('async');
+var _         = require('underscore');
+var merkle    = require('merkle');
+var Table     = require('cli-table');
+var tweetnacl = require('tweetnacl');
+var crypto    = require('../lib/crypto');
+var base58    = require('../lib/base58');
 var stdinData = '';
 
 // Consts
@@ -39,6 +42,47 @@ program
   .option('--vchanges <+-fingerprints>', 'Voters changes: chain of fingerprints, preceeded by a + or - char.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
+  .option('--salt <salt>', 'Salt string')
+  .option('--passwd <password>', 'Password of the key')
+  .option('--store', 'Store data instead of writing to sdout')
+
+program
+  .command('sec')
+  .description('Get base58 secret key using --salt & --password parameters')
+  .action(withKeyPair(function (pub, sec) {
+    console.log(base58.encode(sec));
+  }));
+
+program
+  .command('pub')
+  .description('Get base58 public key using --salt & --password parameters')
+  .action(withKeyPair(function (pub, sec) {
+    console.log(base58.encode(pub));
+  }));
+
+program
+  .command('self [uid]')
+  .description('Show remote pubkey in ASCII armored format.')
+  .action(withKeyPair(function (pub, sec, uid) {
+    var raw = "";
+    async.waterfall([
+      function (next){
+        raw += base58.encode(pub) + '\n';
+        raw += "UID:" + uid + '\n';
+        raw += "META:TS:" + new Date().utcZero().timestamp() + '\n';
+        crypto.sign(raw, sec, next);
+      },
+      function (sig, next){
+        raw += sig + '\n';
+        next(null, raw);
+      },
+    ], handleError(function (selfCert) {
+      if (program.store)
+        writeInHome("self", selfCert);
+      else
+        process.stdout.write(selfCert);
+    }));
+  }));
 
 program
   .command('pubkey')
@@ -878,6 +922,55 @@ function coinValue (coinNumber, am) {
   return Math.pow(2, power);
 }
 
+function handleError (success) {
+  return function () {
+    if (arguments[0])
+      console.error(arguments[0]);
+    else {
+      var args = Array.prototype.slice.call(arguments);
+      success.apply(success, args.slice(1));
+    }
+  };
+}
+
+function withKeyPair (parameters, done) {
+  if (arguments.length == 1) {
+    done = parameters;
+    parameters = [];
+  }
+  return withParams(['salt', 'passwd'], function () {
+    var args = Array.prototype.slice.call(arguments);
+    crypto.getKeyPair(program.passwd, program.salt, function (err, pair) {
+      done.apply(done, [pair.publicKey, pair.secretKey].concat(args));
+    });
+  });
+}
+
+function withParams (parameters, done) {
+  return function () {
+    var err = null;
+    parameters.forEach(function(p){
+      if(!err && !program[p]){
+        err = "Requires --" + p + " parameter";
+      }
+    });
+    if (err) {
+      console.error(err);
+      process.exit(1);
+    }
+    // console.log(arguments);
+    done.apply(done, arguments);
+  };
+}
+
+function writeInHome (fileName, content) {
+  var homePath = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+  var ucoinPath = homePath + '/.ucoin';
+  if (!fs.existsSync(ucoinPath))
+    fs.mkdirSync(ucoinPath);
+  fs.writeFileSync(ucoinPath + '/' + fileName, content, 'utf8');
+}
+
 String.prototype.trim = function(){
   return this.replace(/^\s+|\s+$/g, '');
 };
@@ -905,4 +998,16 @@ String.prototype.coin = function(){
   } else {
     return null;
   }
+};
+
+Date.prototype.utc = function(){
+  return new Date();
+};
+
+Date.prototype.utcZero = function(){
+  return new Date(this.getTime() + this.getTimezoneOffset()*60*1000);
+};
+
+Date.prototype.timestamp = function(){
+  return Math.floor(this.getTime() / 1000);
 };

@@ -42,9 +42,11 @@
     "should": "",
     "sha1": "",
     "supertest": "",
-    "nock": "~0.31.0"
+    "nock": "~0.31.0",
+    "tweetnacl": "0.11.2",
+    "scrypt": "3.0.1"
   },
   "bin": {
-    "ucoin": "./bin/ucoin.sh"
+    "ucoin": "./bin/ucoin"
   }
 }
