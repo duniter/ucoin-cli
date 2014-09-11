@@ -16,11 +16,12 @@ function vuCoin(host, port, intialized){
 
   this.wot = {
 
-    add: function (pubkey, self, done) {
+    add: function (pubkey, self, other, done) {
       post('/wot/add', done)
       .form({
         "pubkey": pubkey,
-        "self": self
+        "self": self,
+        "other": other
       });
     },
 

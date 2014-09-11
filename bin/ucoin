@@ -10,8 +10,11 @@ var _         = require('underscore');
 var merkle    = require('merkle');
 var Table     = require('cli-table');
 var tweetnacl = require('tweetnacl');
+var moment    = require('moment');
+var inquirer  = require('inquirer');
 var crypto    = require('../lib/crypto');
 var base58    = require('../lib/base58');
+var ask       = require('../lib/ask');
 var stdinData = '';
 
 // Consts
@@ -75,7 +78,7 @@ program
         writeInHome("self", selfCert);
       if (program.send)
         withConnection(function (node) {
-          node.wot.add(base58.encode(pub), selfCert.split('\n').slice(1).join('\n'), function (err) {
+          node.wot.add(base58.encode(pub), selfCert.split('\n').slice(1).join('\n'), '', function (err) {
             if (err) console.error('Error:', err);
             else console.log('Successfully sent');
           })
@@ -134,14 +137,88 @@ program
   }));
 
 program
-  .command('pubkey')
+  .command('certify [uid]')
   .description('Show remote pubkey in ASCII armored format.')
-  .action(connect(function (node) {
-    node.network.pubkey(proxy(function (res) {
-      console.log(res);
+  .action(withConnection(function (node, uid) {
+    async.waterfall([
+      function (next){
+        node.wot.lookup(uid, next);
+      },
+      function (res, next){
+        var matches = [];
+        var hash = {};
+        res.results.forEach(function(pubres){
+          pubres.uids.forEach(function(uidres){
+            var day = moment.unix(uidres.meta.timestamp);
+            var id = [uidres.uid, day.format('lll'), uidres.self.substring(0, 8)].join(' ');
+            hash[id] = { pub: pubres.pubkey, uid: uidres.uid, time: uidres.meta.timestamp, sig: uidres.self };
+            matches.push(id);
+          });
+        });
+        if (matches.length == 0)
+          next('No matching identity found on server');
+        else {
+          matches = matches.concat(["None"]);
+          ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
+            if (said == 'None')
+              next('Aborted.');
+            else
+              next(null, hash[said]);
+          });
+        }
+      },
+      function (sCert, next){
+        var now = moment().unix();
+        var toBeSigned = ['UID:' + sCert.uid, 'META:TS:' + sCert.time, sCert.sig, 'META:TS:' + now, ''].join('\n');
+        console.log('-----------------');
+        console.log(toBeSigned);
+        console.log('-----------------');
+        ask.choose('You are about to sign this identity, continue?', false,
+          async.apply(next, null, toBeSigned, now, sCert.pub),
+          async.apply(next, 'Aborted.'));
+      },
+      function (certification, when, sPub, next){
+        sign(certification, function (err, sig, pub){
+          next(err, certification + sig, pub, when, sPub);
+        });
+      },
+      function (oCert, pub, when, sPub, next){
+        var lines = oCert.split('\n');
+        var inline = [
+          base58.encode(pub),
+          sPub,
+          when,
+          lines.slice(lines.length-1)
+        ].join(':') + '\n';
+        next(null, inline, sPub, lines.slice(0, 3).join('\n'));
+      },
+    ], handleError(function (inline, sPub, selfCert) {
+      if (program.send)
+        node.wot.add(sPub, selfCert, inline, function (err) {
+          if (err) console.error('Error:', err);
+          else console.log('Successfully sent');
+        })
+      if (!program.send && !program.store)
+        console.log(inline);
     }));
-    return;
   }));
+
+function sign (msg, done) {
+  async.waterfall([
+    function (next){
+      if (program.passwd) next(null, program.passwd);
+      else ask.password(next);
+    },
+    function (passwd, next){
+      crypto.getKeyPair(passwd, program.salt, next);
+    },
+    function (pair, next){
+      crypto.sign(msg, pair.secretKey, function (err, sig) {
+        next(err, sig, pair.publicKey);
+      });
+    },
+  ], done);
+}
 
 program
   .command('currency')
