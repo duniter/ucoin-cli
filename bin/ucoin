@@ -92,7 +92,8 @@ function createSelfCert (pub, sec, uid, done) {
         raw += base58.encode(pub) + '\n';
         raw += "UID:" + uid + '\n';
         raw += "META:TS:" + new Date().utcZero().timestamp() + '\n';
-        crypto.sign(raw, sec, next);
+        var selfCert = raw.split('\n').slice(1).join('\n');
+        crypto.sign(selfCert, sec, next);
       },
       function (sig, next){
         raw += sig + '\n';
