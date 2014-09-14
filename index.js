@@ -30,46 +30,24 @@ function vuCoin(host, port, intialized){
     }
   };
 
-  this.pks = {
-
-    add: function (key, done) {
-      post('/pks/add', done)
-      .form({
-        "keytext": key
-      });
-    },
-
-    lookup: function (search, done) {
-      get('/pks/lookup?search=' + encodeURIComponent(search) + '&op=index', done);
-    },
-
-    all: function () {
-      var opts = arguments.length == 1 ? {} : arguments[0];
-      var done = arguments.length == 1 ? arguments[0] : arguments[1];
-      dealMerkle(ResultTypes.PublicKey, '/pks/all', opts, done);
-    }
-  };
-
-  this.keychain = {
+  this.blockchain = {
 
     parameters: function (done) {
-      get('/keychain/parameters', done);
+      get('/blockchain/parameters', done);
     },
 
     membership: function (ms, done) {
-      var sigIndex = ms.indexOf("-----BEGIN");
-      postMembership('/keychain/membership', {
-        "membership": ms.substring(0, sigIndex),
-        "signature": ms.substring(sigIndex)
+      postMembership('/blockchain/membership', {
+        "membership": ms,
       }, done);
     },
 
     current: function (done) {
-      getKeyblock('/keychain/current', done);
+      getKeyblock('/blockchain/current', done);
     },
 
     keyblock: function (number, done) {
-      getKeyblock('/keychain/keyblock/' + number, done);
+      getKeyblock('/blockchain/keyblock/' + number, done);
     },
   }
 

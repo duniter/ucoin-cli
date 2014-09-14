@@ -35,14 +35,8 @@ program
   .option('--comment <comment>', 'Comment to add to transaction.')
   .option('--transaction <txFile>', 'Transaction file to send.')
   .option('--membership <msFile>', 'Membership file to send.')
-  .option('--voting <votingFile>', 'Voting file to send.')
-  .option('-d, --dividend <amount>', 'Universal Dividend amount.', parseInt)
-  .option('-m, --mincoin <pow10>', 'New coins minimal 10 power.', parseInt)
-  .option('-n, --votes <number>', 'Number of votes required for amendment.', parseInt)
-  .option('-s, --signature <sigFile>', 'File of a signature to append.')
+  .option('-c, --currency <name>', 'Currency name.')
   .option('-t, --timestamp <timestamp>', 'Timestamp used for GeneratedOn field in amendment.', parseInt)
-  .option('--mchanges <+-fingerprints>', 'Members changes: chain of fingerprints, preceeded by a + or - char.')
-  .option('--vchanges <+-fingerprints>', 'Voters changes: chain of fingerprints, preceeded by a + or - char.')
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
   .option('--salt <salt>', 'Salt string')
@@ -107,6 +101,57 @@ function createSelfCert (pub, sec, uid, done) {
 
 function readSelfCert (done) {
   done(null, readInHome('self'));
+}
+
+program
+  .command('join [uid] [certts]')
+  .description('Send join membership request.')
+  .action(withKeyPair(['currency'], function (pub, sec, uid, certts) {
+    async.waterfall([
+      function (next){
+        if (!uid){
+          next('User ID is required');
+          return;
+        }
+        createMembership('IN', pub, sec, uid, certts, next);
+      },
+    ], handleError(function (signedMS) {
+      if (program.store)
+        writeInHome("join", signedMS);
+      if (program.send)
+        withConnection(function (node) {
+          node.blockchain.membership(signedMS, function (err) {
+            if (err) console.error('Error:', err);
+            else console.log('Successfully sent join membership.');
+          })
+        })();
+      if (!program.send && !program.store)
+        process.stdout.write(signedMS);
+    }));
+  }));
+
+function createMembership (type, pub, sec, uid, certts, done) {
+    var raw = "";
+    async.waterfall([
+      function (next){
+        raw += "Version: 1" + '\n';
+        raw += "Currency: " + program.currency + '\n';
+        raw += "Issuer: " + base58.encode(pub) + '\n';
+        raw += "Date: " + new Date().utcZero().timestamp() + '\n';
+        raw += "Membership: " + type + '\n';
+        if (uid) {
+          raw += "UserID: " + uid + '\n';
+        }
+        if (certts) {
+          raw += "CertTS: " + certts + '\n';
+        }
+        crypto.sign(raw, sec, next);
+      },
+      function (sig, next){
+        raw += sig + '\n';
+        next(null, raw);
+      },
+    ], done);
 }
 
 program
@@ -220,15 +265,15 @@ function sign (msg, done) {
   ], done);
 }
 
-program
-  .command('currency')
-  .description('Give currency name for a given host and port.')
-  .action(connect(function (node) {
-    node.network.peering.get(proxy(function (json) {
-      console.log(json.currency);
-    }));
-    return;
-  }));
+// program
+//   .command('currency')
+//   .description('Give currency name for a given host and port.')
+//   .action(connect(function (node) {
+//     node.network.peering.get(proxy(function (json) {
+//       console.log(json.currency);
+//     }));
+//     return;
+//   }));
 
 program
   .command('pub-wallet')
@@ -1064,7 +1109,7 @@ function withKeyPair (parameters, done) {
     done = parameters;
     parameters = [];
   }
-  return withParams(['salt', 'passwd'], function () {
+  return withParams(['salt', 'passwd'].concat(parameters), function () {
     var args = Array.prototype.slice.call(arguments);
     crypto.getKeyPair(program.passwd, program.salt, function (err, pair) {
       done.apply(done, [pair.publicKey, pair.secretKey].concat(args));
