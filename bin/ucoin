@@ -45,6 +45,7 @@ program
   .option('--passwd <password>', 'Password of the key')
   .option('--store', 'Store data instead of writing to sdout')
   .option('--send', 'send data instead of writing to sdout')
+  .option('-y, --yes', 'Do not ask any confirmation')
 
 program
   .command('sec')
@@ -220,9 +221,12 @@ program
         console.log('-----------------');
         console.log(toBeSigned);
         console.log('-----------------');
-        ask.choose('You are about to sign this identity, continue?', false,
-          async.apply(next, null, toBeSigned, now, sCert.pub),
-          async.apply(next, 'Aborted.'));
+        if (program.yes)
+          next(null, toBeSigned, now, sCert.pub);
+        else
+          ask.choose('You are about to sign this identity, continue?', false,
+            async.apply(next, null, toBeSigned, now, sCert.pub),
+            async.apply(next, 'Aborted.'));
       },
       function (certification, when, sPub, next){
         sign(certification, function (err, sig, pub){
