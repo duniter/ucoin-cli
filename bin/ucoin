@@ -185,8 +185,8 @@ program
   }));
 
 program
-  .command('certify [uid]')
-  .description('Show remote pubkey in ASCII armored format.')
+  .command('cert [uid]')
+  .description('Certify an identity matching <ui> found on remote server')
   .action(withConnection(function (node, uid) {
     async.waterfall([
       function (next){
@@ -206,27 +206,32 @@ program
         if (matches.length == 0)
           next('No matching identity found on server');
         else {
-          matches = matches.concat(["None"]);
-          ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
-            if (said == 'None')
-              next('Aborted.');
-            else
-              next(null, hash[said]);
-          });
+          if (matches.length == 1)
+            next(null, hash[matches[matches.length-1]]);
+          else {
+            matches = matches.concat(["None"]);
+            ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
+              if (said == 'None')
+                next('Aborted.');
+              else
+                next(null, hash[said]);
+            });
+          }
         }
       },
       function (sCert, next){
         var now = moment().unix();
         var toBeSigned = ['UID:' + sCert.uid, 'META:TS:' + sCert.time, sCert.sig, 'META:TS:' + now, ''].join('\n');
-        console.log('-----------------');
-        console.log(toBeSigned);
-        console.log('-----------------');
         if (program.yes)
           next(null, toBeSigned, now, sCert.pub);
-        else
+        else {
+          console.log('-----------------');
+          console.log(toBeSigned);
+          console.log('-----------------');
           ask.choose('You are about to sign this identity, continue?', false,
             async.apply(next, null, toBeSigned, now, sCert.pub),
             async.apply(next, 'Aborted.'));
+        }
       },
       function (certification, when, sPub, next){
         sign(certification, function (err, sig, pub){
