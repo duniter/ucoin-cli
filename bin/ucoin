@@ -12,6 +12,7 @@ var Table     = require('cli-table');
 var tweetnacl = require('tweetnacl');
 var moment    = require('moment');
 var inquirer  = require('inquirer');
+var mkdirp    = require('mkdirp');
 var crypto    = require('../lib/crypto');
 var base58    = require('../lib/base58');
 var ask       = require('../lib/ask');
@@ -39,6 +40,7 @@ program
   .option('-t, --timestamp <timestamp>', 'Timestamp used for GeneratedOn field in amendment.', parseInt)
   .option('-h, --host <address>', 'DNS, IPv4 or IPv6 address of the node to contact.')
   .option('-p, --port <port>', 'Port of the node to contact.')
+  .option('--user <user>', 'Alias for storing data in a specific folder. Default to \'default\'')
   .option('--salt <salt>', 'Salt string')
   .option('--passwd <password>', 'Password of the key')
   .option('--store', 'Store data instead of writing to sdout')
@@ -1152,18 +1154,16 @@ function withParams (parameters, done) {
 
 function writeInHome (fileName, content) {
   var homePath = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
-  var ucoinPath = homePath + '/.ucoin';
-  if (!fs.existsSync(ucoinPath))
-    fs.mkdirSync(ucoinPath);
+  var ucoinPath = homePath + '/.ucoin/' + (program.user ? program.user : 'defaut');
+  mkdirp.sync(ucoinPath, '0770');
   fs.writeFileSync(ucoinPath + '/' + fileName, content, 'utf8');
 }
 
 function readInHome (fileName) {
   var homePath = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
-  var ucoinPath = homePath + '/.ucoin';
-  var filePath = homePath + '/.ucoin/' + fileName;
-  if (!fs.existsSync(ucoinPath + '/'))
-    fs.mkdirSync(ucoinPath);
+  var ucoinPath = homePath + '/.ucoin/' + (program.user ? program.user : 'defaut');
+  mkdirp.sync(ucoinPath, '0660');
+  var filePath = ucoinPath + '/' + fileName;
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
 }
 

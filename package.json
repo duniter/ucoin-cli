@@ -35,7 +35,8 @@
     "hdc": "~0.7.0",
     "cli-table": "*",
     "openpgp": "0.5.1",
-    "underscore": ""
+    "underscore": "",
+    "mkdirp": ""
   },
   "devDependencies": {
     "mocha": "",
