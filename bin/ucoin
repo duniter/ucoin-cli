@@ -133,7 +133,7 @@ program
                 matches[pubres.pubkey] = [];
                 pubres.uids.forEach(function(uidres){
                   var choice = uidres.meta.timestamp + ' ' + uidres.uid;
-                  hash[choice] = uidres.meta.timestamp;
+                  hash[choice] = uidres.meta.timestamp + ' ' + uidres.uid;
                   matches.push(choice);
                 });
               });
