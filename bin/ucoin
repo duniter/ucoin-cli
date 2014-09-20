@@ -116,7 +116,48 @@ program
           next('User ID is required');
           return;
         }
-        createMembership('IN', pub, sec, uid, certts, next);
+        if (certts) {
+          next(null, certts);
+        } else {
+          // Look for possible certts
+          async.waterfall([
+            function (next) {
+              withConnection(function (node){
+                node.wot.lookup(decodeURIComponent(uid), next);
+              })();
+            },
+            function (res, next){
+              var matches = [];
+              var hash = {};
+              res.results.forEach(function(pubres){
+                matches[pubres.pubkey] = [];
+                pubres.uids.forEach(function(uidres){
+                  var choice = uidres.meta.timestamp + ' ' + uidres.uid;
+                  hash[choice] = uidres.meta.timestamp;
+                  matches.push(choice);
+                });
+              });
+              if (matches.length == 0)
+                next('No matching identity found on server');
+              else {
+                if (matches.length == 1)
+                  next(null, matches[matches.length-1]);
+                else {
+                  matches = matches.concat(["None"]);
+                  ask.pick("Which one to use for membership?", matches, matches[matches.length-1], function (err, said) {
+                    if (said == 'None')
+                      next('Aborted.');
+                    else
+                      next(null, hash[said]);
+                  });
+                }
+              }
+            },
+          ], next);
+        }
+      },
+      function (ts, next){
+        createMembership('IN', pub, sec, uid, ts.split(' ')[0], next);
       },
     ], handleError(function (signedMS) {
       if (program.store)
