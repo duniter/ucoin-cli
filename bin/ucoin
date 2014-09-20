@@ -26,7 +26,7 @@ program.host = "localhost";
 program.port = "8081";
 
 program
-  .version('0.20.2')
+  .version('0.21.0')
   .option('--key <keyFile>', 'File of the key to submit.')
   .option('--search <search>', 'Search string')
   .option('--votefile <voteFile>', 'Vote file to send.')
