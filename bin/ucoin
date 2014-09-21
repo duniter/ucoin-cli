@@ -77,7 +77,7 @@ program
         withConnection(function (node) {
           node.wot.add(base58.encode(pub), selfCert.split('\n').slice(1).join('\n'), '', function (err) {
             if (err) console.error('Error:', err);
-            else console.log('Successfully sent');
+            else console.log('Successfully sent identity \'' + uid + '\'');
           })
         })();
       if (!program.send && !program.store)
@@ -293,7 +293,7 @@ program
       if (program.send)
         node.wot.add(sPub, selfCert, inline, function (err) {
           if (err) console.error('Error:', err);
-          else console.log('Successfully sent');
+          else console.log('Successfully sent certification of \'' + uid + '\'');
         })
       if (!program.send && !program.store)
         console.log(inline);
