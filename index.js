@@ -46,8 +46,8 @@ function vuCoin(host, port, intialized){
       getKeyblock('/blockchain/current', done);
     },
 
-    keyblock: function (number, done) {
-      getKeyblock('/blockchain/keyblock/' + number, done);
+    block: function (number, done) {
+      getKeyblock('/blockchain/block/' + number, done);
     },
   }
 

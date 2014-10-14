@@ -316,6 +316,77 @@ function sign (msg, done) {
   ], done);
 }
 
+program
+  .command('import-ms [blockNumber] [host] [port]')
+  .description('Show remote pubkey in ASCII armored format.')
+  .action(withConnection(function (node, blockNumber, host, port) {
+    async.waterfall([
+      function (next){
+        node.blockchain.block(blockNumber, next);
+      },
+      function (res, next){
+        var matches = [];
+        var identities = {};
+        var joins = {};
+        res.identities.forEach(function (idty) {
+          var sp = idty.split(':');
+          identities[sp[0]] = { pubkey: sp[0], sig: sp[1], time: sp[2], userid: sp[3] };
+        });
+        res.joiners.forEach(function (join) {
+          var sp = join.split(':');
+          joins[sp[0]] = { pubkey: sp[0], sig: sp[1], time: sp[2] };
+        });
+        console.log('Block #%s...', blockNumber);
+        async.forEach(res.joiners, function (inlineMS, callback) {
+          async.waterfall([
+            function (next) {
+              var pub = inlineMS.split(':')[0];
+              var raw = "";
+              raw += "Version: 1" + '\n';
+              raw += "Currency: " + res.currency + '\n';
+              raw += "Issuer: " + pub + '\n';
+              raw += "Date: " + joins[pub].time + '\n';
+              raw += "Membership: " + 'IN' + '\n';
+              raw += "UserID: " + identities[pub].userid + '\n';
+              raw += "CertTS: " + identities[pub].time + '\n';
+              raw += joins[pub].sig + '\n';
+              vucoin(host, port, function (err, tgtNode) {
+                if (err) {
+                  console.error(err);
+                  process.exit(1);
+                }
+                tgtNode.blockchain.membership(raw, function (err) {
+                  if (err) console.error('Error:', err);
+                  else console.log('Successfully sent join membership.');
+                });
+                next();
+              });
+            }
+          ], callback);
+        }, next);
+      },
+    ], handleError(function (res) {
+    }));
+  }));
+
+
+    //   function (ts, next){
+    //     createMembership('IN', pub, sec, uid, ts.split(' ')[0], next);
+    //   },
+    // ], handleError(function (signedMS) {
+    //   if (program.store)
+    //     writeInHome("join", signedMS);
+    //   if (program.send)
+    //     withConnection(function (node) {
+    //       node.blockchain.membership(signedMS, function (err) {
+    //         if (err) console.error('Error:', err);
+    //         else console.log('Successfully sent join membership.');
+    //       })
+    //     })();
+    //   if (!program.send && !program.store)
+    //     process.stdout.write(signedMS);
+    // }));
+
 // program
 //   .command('currency')
 //   .description('Give currency name for a given host and port.')
