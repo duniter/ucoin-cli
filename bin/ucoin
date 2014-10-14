@@ -9,7 +9,6 @@ var async     = require('async');
 var _         = require('underscore');
 var merkle    = require('merkle');
 var Table     = require('cli-table');
-var tweetnacl = require('tweetnacl');
 var moment    = require('moment');
 var inquirer  = require('inquirer');
 var mkdirp    = require('mkdirp');
@@ -1212,7 +1211,6 @@ function writeInHome (fileName, content) {
 function readInHome (fileName) {
   var homePath = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
   var ucoinPath = homePath + '/.ucoin/' + (program.user ? program.user : 'defaut');
-  mkdirp.sync(ucoinPath, '0660');
   var filePath = ucoinPath + '/' + fileName;
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
 }
