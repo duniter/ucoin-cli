@@ -337,7 +337,7 @@ program
           joins[sp[0]] = { pubkey: sp[0], sig: sp[1], time: sp[2] };
         });
         console.log('Block #%s...', blockNumber);
-        async.forEach(res.joiners, function (inlineMS, callback) {
+        async.forEachSeries(res.joiners, function (inlineMS, callback) {
           async.waterfall([
             function (next) {
               var pub = inlineMS.split(':')[0];
