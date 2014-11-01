@@ -49,7 +49,20 @@ function vuCoin(host, port, intialized){
     block: function (number, done) {
       getKeyblock('/blockchain/block/' + number, done);
     },
-  }
+  };
+
+  this.tx = {
+
+    process: function (tx, done) {
+      postTransaction('/tx/process', {
+        "transaction": tx,
+      }, done);
+    },
+
+    sources: function (pubkey, done) {
+      getSources('/tx/sources/' + pubkey, done);
+    },
+  };
 
   this.network = {
 
@@ -321,6 +334,12 @@ function vuCoin(host, port, intialized){
   function getKeyblock (url, callback) {
     get(url, function (err, res, body) {
       callback(err, sanitize(res, ResultTypes.Keyblock));
+    });
+  }
+
+  function getSources (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Sources));
     });
   }
 
@@ -637,6 +656,16 @@ ResultTypes.Keyblock = {
   "membersChanges": [String],
   "keysChanges": [Object]
 };
+ResultTypes.Source = {
+  "type": String,
+  "number": Number,
+  "fingerprint": String,
+  "amount": Number
+};
+ResultTypes.Sources = {
+  "pubkey": String,
+  "sources": [ResultTypes.Source]
+};
 ResultTypes.Amendment = {
   "version": String,
   "currency": String,
@@ -663,15 +692,12 @@ ResultTypes.Transaction = {
   "raw": String,
   "transaction":
   {
-    "signature": String,
+    "signatures": [String],
     "version": Number,
     "currency": String,
-    "sender": String,
-    "number": Number,
-    "previousHash": String,
-    "recipient": String,
-    "coins": [String],
-    "comment": String
+    "issuers": [String],
+    "inputs": [String],
+    "outputs": [String]
   }
 };
 ResultTypes.TransactionList = {

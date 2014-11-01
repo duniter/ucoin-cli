@@ -369,6 +369,75 @@ program
   }));
 
 program
+  .command('transfer [amount] [recipient]')
+  .description('Transfer an amount of coins to a single recipient.')
+  .action(withConnectionAndKeyPair(function (node, pub, sec, amount, recipient) {
+    var sources = [];
+    var currency = '';
+    var raw = "";
+    async.waterfall([
+      function (next) {
+        if (!amount || !recipient) {
+          next('Amount and recipient are required');
+          return;
+        }
+        node.tx.sources(base58.encode(pub), next);
+      },
+      function (json, next){
+        currency = json.currency;
+        var i = 0;
+        var cumulated = 0;
+        while (cumulated < amount && i < json.sources.length) {
+          var src = json.sources[i];
+          sources.push({
+            'type': src.type,
+            'amount': src.amount,
+            'number': src.number,
+            'hash': src.fingerprint
+          });
+          cumulated += src.amount;
+          i++;
+        }
+        if (cumulated < amount) {
+          next('You do not have enough coins! (' + cumulated + ' ' + currency + ' left)');
+        }
+        else {
+          next();
+        }
+      },
+      function (next){
+        var inputSum = 0;
+        var issuer = base58.encode(pub);
+        raw += "Version: 1" + '\n';
+        raw += "Currency: " + currency + '\n';
+        raw += "Issuers:\n";
+        raw += issuer + '\n';
+        raw += "Inputs:\n";
+        sources.forEach(function (src) {
+          raw += ['0', src.type, src.number, src.hash, src.amount].join(':') + '\n';
+          inputSum += src.amount;
+        });
+        raw += "Outputs:\n";
+        raw += [recipient, amount].join(':') + '\n';
+        if (inputSum - amount > 0) {
+          // Rest back to issuer
+          raw += [issuer, inputSum - amount].join(':') + '\n';
+        }
+        sign(raw, next);
+      },
+      function (sig, pub, next) {
+        raw += sig + '\n';
+        console.log(raw);
+        node.tx.process(raw, function (err) {
+          if (err) console.error('Error:', err);
+          else console.log('Successfully sent transaction.');
+        });
+      },
+    ], handleError(function (res) {
+    }));
+  }));
+
+program
   .command('peer')
   .description('Show remote peering informations.')
   .action(connect(function (node) {
@@ -383,38 +452,36 @@ program
   }));
 
 program
-  .command('coins-list [owner]')
-  .description('Show coins of given owner.')
-  .action(connect(function (owner, node) {
-    if(!owner){
-      console.error('owner is required');
+  .command('balance [pubkey]')
+  .description('Show available sources & computed balance of given pubkey.')
+  .action(withConnection(function (node, pubkey) {
+    if(!pubkey){
+      console.error('pubkey is required');
       return;
     }
-    var coins = {};
-    var amendments = {};
-    node.hdc.coins.list(owner, proxy(function (res) {
-      var sum = 0;
-      async.forEachSeries(res.coins, function(coinId, callback){
-        var c = coinId.coin();
-        getAmendment(amendments, c, node, function (err, amount) {
-          if (!err) {
-            // Coins per value
-            coins[amount] = coins[amount] || [];
-            coins[amount].push(c);
-            sum += amount;
-          }
-          callback(err);
+    var sources = [];
+    async.waterfall([
+      function (next) {
+        node.tx.sources(pubkey, next);
+      },
+      function (json, next){
+        currency = json.currency;
+        var i = 0;
+        var cumulated = 0;
+        json.sources.forEach(function (src) {
+          sources.push({
+            'type': src.type,
+            'amount': src.amount,
+            'number': src.number,
+            'hash': src.fingerprint
+          });
+          cumulated += src.amount;
         });
-      }, function(err){
-        if (err) {
-          console.error(err);
-          return;
-        }
-        console.log("Credit: " + sum);
+        console.log("Credit: " + cumulated);
         console.log("-------------------");
         var table = new Table({
-          head: ['Value', 'Quantity', ''],
-          colWidths: [Math.min(6, (""+sum).length + 5), 41, 10],
+          head: ['Value', 'From', 'Source FPR'],
+          colWidths: [Math.min(6, (""+cumulated).length + 5), 5, 41],
           chars: {'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
                , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
                , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': ''
@@ -422,13 +489,14 @@ program
           style: { 'padding-left': 0, 'padding-right': 0, compact : true }
         });
 
-        var keys = _(coins).keys();
-        keys.sort().reverse();
-        keys.forEach(function (amount) {
-          table.push([amount, coins[amount].length]);
+        sources = _(sources).sort(function (a, b) { return a.amount < b.amount });
+        sources.forEach(function (src) {
+          table.push([src.amount, src.type, src.hash]);
         });
         console.log(table.toString());
-      });
+        next();
+      },
+    ], handleError(function (res) {
     }));
   }));
 
@@ -666,7 +734,7 @@ function withConnection (parameters, done) {
     done = parameters;
     parameters = [];
   }
-  return withParams(['host', 'port'], function () {
+  return withParams(['host', 'port'].concat(parameters), function () {
     var args = Array.prototype.slice.call(arguments);
     vucoin(program.host, program.port, function (err, node) {
       if (err) {
@@ -674,6 +742,34 @@ function withConnection (parameters, done) {
         process.exit(1);
       }
       done.apply(done, [node].concat(args));
+    });
+  });
+}
+
+function withConnectionAndKeyPair (parameters, done) {
+  if (arguments.length == 1) {
+    done = parameters;
+    parameters = [];
+  }
+  return withParams(['host', 'port', 'salt', 'passwd'].concat(parameters), function () {
+    var args = Array.prototype.slice.call(arguments);
+    async.parallel({
+      node: function (next) {
+        vucoin(program.host, program.port, function (err, node) {
+          if (err) {
+            console.error(err);
+            process.exit(1);
+          }
+          next.apply(next, [null, node]);
+        });
+      },
+      keys: function (next) {
+        crypto.getKeyPair(program.passwd, program.salt, function (err, pair) {
+          next.apply(next, [null, pair.publicKey, pair.secretKey]);
+        });
+      }
+    }, function (err, res) {
+      done.apply(done, [res.node].concat(res.keys).concat(args));
     });
   });
 }
@@ -706,6 +802,12 @@ function readInHome (fileName) {
   var ucoinPath = homePath + '/.ucoin/' + (program.user ? program.user : 'defaut');
   var filePath = ucoinPath + '/' + fileName;
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+}
+
+function split (pattern) {
+  return function (str) {
+    return str.split(pattern);
+  };
 }
 
 String.prototype.trim = function(){
