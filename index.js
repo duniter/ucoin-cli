@@ -43,11 +43,11 @@ function vuCoin(host, port, intialized){
     },
 
     current: function (done) {
-      getKeyblock('/blockchain/current', done);
+      getBlock('/blockchain/current', done);
     },
 
     block: function (number, done) {
-      getKeyblock('/blockchain/block/' + number, done);
+      getBlock('/blockchain/block/' + number, done);
     },
   };
 
@@ -331,9 +331,9 @@ function vuCoin(host, port, intialized){
     });
   }
 
-  function getKeyblock (url, callback) {
+  function getBlock (url, callback) {
     get(url, function (err, res, body) {
-      callback(err, sanitize(res, ResultTypes.Keyblock));
+      callback(err, sanitize(res, ResultTypes.Block));
     });
   }
 
@@ -641,20 +641,24 @@ ResultTypes.MerkleWithLeaf = {
 ResultTypes.Stream = {
   "peers": [String]
 };
-ResultTypes.Keyblock = {
+ResultTypes.Block = {
   "version": Number,
+  "currency": String,
   "nonce": Number,
   "number": Number,
-  "timestamp": Number,
+  "date": Number,
+  "confirmedDate": Number,
+  "issuer": String,
+  "parameters": String,
   "membersCount": Number,
-  "currency": String,
-  "membersRoot": String,
-  "signature": String,
   "hash": String,
   "previousHash": String,
   "previousIssuer": String,
-  "membersChanges": [String],
-  "keysChanges": [Object]
+  "joiners": [String],
+  "actives": [String],
+  "leavers": [String],
+  "excluded": [String],
+  "signature": String
 };
 ResultTypes.Source = {
   "type": String,
