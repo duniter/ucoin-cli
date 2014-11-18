@@ -107,7 +107,8 @@ function readSelfCert (done) {
 program
   .command('join [uid] [certts]')
   .description('Send join membership request.')
-  .action(withKeyPair(['currency'], function (pub, sec, uid, certts) {
+  .action(withKeyPair(function (pub, sec, uid, certts) {
+    var certts = 0;
     async.waterfall([
       function (next){
         if (!uid){
@@ -154,8 +155,27 @@ program
           ], next);
         }
       },
-      function (ts, next){
-        createMembership('IN', pub, sec, uid, ts.split(' ')[0], next);
+      function (ts, next) {
+        certts = parseInt(ts.split(' ')[0]);
+        withConnection(function (node) {
+          async.parallel({
+            current: function (next) {
+              node.blockchain.current(function (err, current) {
+                next(null, err ? null : current);
+              });
+            },
+            parameters: function (next) {
+              node.blockchain.parameters(function (err, json) {
+                next(err, json);
+              });
+            }
+          }, next);
+        })();
+      },
+      function (res, next){
+        var number = res.current ? res.current.number : 0;
+        var hash = res.current ? res.current.hash : 'DA39A3EE5E6B4B0D3255BFEF95601890AFD80709';
+        createMembership('IN', res.parameters.currency, pub, sec, number, hash, uid, certts, next);
       },
     ], handleError(function (signedMS) {
       if (program.store)
@@ -172,14 +192,15 @@ program
     }));
   }));
 
-function createMembership (type, pub, sec, uid, certts, done) {
+function createMembership (type, currency, pub, sec, number, hash, uid, certts, done) {
     var raw = "";
     async.waterfall([
       function (next){
         raw += "Version: 1" + '\n';
-        raw += "Currency: " + program.currency + '\n';
+        raw += "Type: Membership" + '\n';
+        raw += "Currency: " + currency + '\n';
         raw += "Issuer: " + base58.encode(pub) + '\n';
-        raw += "Date: " + new Date().utcZero().timestamp() + '\n';
+        raw += "Block: " + [number, hash].join('-') + '\n';
         raw += "Membership: " + type + '\n';
         if (uid) {
           raw += "UserID: " + uid + '\n';
@@ -232,57 +253,88 @@ program
         node.wot.lookup(uid, next);
       },
       function (res, next){
-        var matches = [];
-        var hash = {};
-        res.results.forEach(function(pubres){
-          pubres.uids.forEach(function(uidres){
-            var day = moment.unix(uidres.meta.timestamp);
-            var id = [uidres.uid, day.format('lll'), uidres.self.substring(0, 8)].join(' ');
-            hash[id] = { pub: pubres.pubkey, uid: uidres.uid, time: uidres.meta.timestamp, sig: uidres.self };
-            matches.push(id);
-          });
-        });
-        if (matches.length == 0)
-          next('No matching identity found on server');
-        else {
-          if (matches.length == 1)
-            next(null, hash[matches[matches.length-1]]);
-          else {
-            matches = matches.concat(["None"]);
-            ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
-              if (said == 'None')
-                next('Aborted.');
-              else
-                next(null, hash[said]);
+        async.parallel({
+          sCert: function (next) {
+            var matches = [];
+            var hash = {};
+            res.results.forEach(function(pubres){
+              pubres.uids.forEach(function(uidres){
+                var day = moment.unix(uidres.meta.timestamp);
+                var id = [uidres.uid, day.format('lll'), uidres.self.substring(0, 8)].join(' ');
+                hash[id] = { pub: pubres.pubkey, uid: uidres.uid, time: uidres.meta.timestamp, sig: uidres.self };
+                matches.push(id);
+              });
             });
+            if (matches.length == 0)
+              next('No matching identity found on server');
+            else {
+              if (matches.length == 1)
+                next(null, hash[matches[matches.length-1]]);
+              else {
+                matches = matches.concat(["None"]);
+                ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
+                  if (said == 'None')
+                    next('Aborted.');
+                  else
+                    next(null, hash[said]);
+                });
+              }
+            }
+          },
+          blockRef: function (next) {
+            async.waterfall([
+              function (next) {
+                withConnection(function (node) {
+                  async.parallel({
+                    current: function (next) {
+                      node.blockchain.current(function (err, current) {
+                        next(null, err ? null : current);
+                      });
+                    },
+                    // parameters: function (next) {
+                    //   node.blockchain.parameters(function (err, json) {
+                    //     next(err, json);
+                    //   });
+                    // }
+                  }, next);
+                })();
+              },
+              function (res, next){
+                var number = res.current ? res.current.number : 0;
+                var hash = res.current ? res.current.hash : 'DA39A3EE5E6B4B0D3255BFEF95601890AFD80709';
+                next(null, [number, hash].join('-'));
+              }
+            ], next);
           }
-        }
+        }, next);
       },
-      function (sCert, next){
-        var now = moment().unix();
-        var toBeSigned = ['UID:' + sCert.uid, 'META:TS:' + sCert.time, sCert.sig, 'META:TS:' + now, ''].join('\n');
+      function (res, next){
+        var sCert = res.sCert;
+        var blockRef = res.blockRef;
+        var blockNumber = blockRef.split('-')[0];
+        var toBeSigned = ['UID:' + sCert.uid, 'META:TS:' + sCert.time, sCert.sig, 'META:TS:' + blockRef, ''].join('\n');
         if (program.yes)
-          next(null, toBeSigned, now, sCert.pub);
+          next(null, toBeSigned, blockNumber, sCert.pub);
         else {
           console.log('-----------------');
           console.log(toBeSigned);
           console.log('-----------------');
           ask.choose('You are about to sign this identity, continue?', false,
-            async.apply(next, null, toBeSigned, now, sCert.pub),
+            async.apply(next, null, toBeSigned, blockNumber, sCert.pub),
             async.apply(next, 'Aborted.'));
         }
       },
-      function (certification, when, sPub, next){
+      function (certification, target, sPub, next){
         sign(certification, function (err, sig, pub){
-          next(err, certification + sig, pub, when, sPub);
+          next(err, certification + sig, pub, target, sPub);
         });
       },
-      function (oCert, pub, when, sPub, next){
+      function (oCert, pub, target, sPub, next){
         var lines = oCert.split('\n');
         var inline = [
           base58.encode(pub),
           sPub,
-          when,
+          target,
           lines.slice(lines.length-1)
         ].join(':') + '\n';
         next(null, inline, sPub, lines.slice(0, 3).join('\n'));
@@ -409,6 +461,7 @@ program
         var inputSum = 0;
         var issuer = base58.encode(pub);
         raw += "Version: 1" + '\n';
+        raw += "Type: Transaction\n";
         raw += "Currency: " + currency + '\n';
         raw += "Issuers:\n";
         raw += issuer + '\n';
@@ -423,6 +476,7 @@ program
           // Rest back to issuer
           raw += [issuer, inputSum - amount].join(':') + '\n';
         }
+        raw += "Comment: \n";
         sign(raw, next);
       },
       function (sig, pub, next) {
