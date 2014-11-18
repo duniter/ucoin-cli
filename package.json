@@ -7,7 +7,6 @@
     "test": "test"
   },
   "scripts": {
-    "test": "mocha test/*.js",
     "postinstall": "./postinstall.sh",
     "postuninstall": "./postuninstall.sh"
   },
