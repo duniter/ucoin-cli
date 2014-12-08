@@ -391,12 +391,17 @@ program
         async.forEachSeries(res.joiners, function (inlineMS, callback) {
           async.waterfall([
             function (next) {
-              var pub = inlineMS.split(':')[0];
+              var sp = inlineMS.split(':');
+              var pub = sp[0];
+              var sig = sp[1];
+              var num = sp[2];
+              var fpr = sp[3];
               var raw = "";
               raw += "Version: 1" + '\n';
+              raw += "Type: Membership" + '\n';
               raw += "Currency: " + res.currency + '\n';
               raw += "Issuer: " + pub + '\n';
-              raw += "Date: " + joins[pub].time + '\n';
+              raw += "Block: " + [num, fpr].join('-') + '\n';
               raw += "Membership: " + 'IN' + '\n';
               raw += "UserID: " + identities[pub].userid + '\n';
               raw += "CertTS: " + identities[pub].time + '\n';
@@ -406,6 +411,7 @@ program
                   console.error(err);
                   process.exit(1);
                 }
+                console.log(raw);
                 tgtNode.blockchain.membership(raw, function (err) {
                   if (err) console.error('Error:', err);
                   else console.log('Successfully sent join membership.');
