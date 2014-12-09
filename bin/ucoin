@@ -369,7 +369,7 @@ function sign (msg, done) {
 
 program
   .command('import-ms [blockNumber] [host] [port]')
-  .description('Show remote pubkey in ASCII armored format.')
+  .description('Import memberships from -h host and send them to remote [host]')
   .action(withConnection(function (node, blockNumber, host, port) {
     async.waterfall([
       function (next){
@@ -411,10 +411,65 @@ program
                   console.error(err);
                   process.exit(1);
                 }
-                console.log(raw);
                 tgtNode.blockchain.membership(raw, function (err) {
                   if (err) console.error('Error:', err);
                   else console.log('Successfully sent join membership.');
+                });
+                next();
+              });
+            }
+          ], callback);
+        }, next);
+      },
+    ], handleError(function (res) {
+    }));
+  }));
+
+program
+  .command('import-idty [blockNumber] [host] [port]')
+  .description('Import identities from -h host and send them to remote [host]')
+  .action(withConnection(function (node, blockNumber, host, port) {
+    async.waterfall([
+      function (next){
+        node.blockchain.block(blockNumber, next);
+      },
+      function (res, next){
+        var matches = [];
+        var identities = {};
+        var joins = {};
+        res.identities.forEach(function (idty) {
+          var sp = idty.split(':');
+          identities[sp[0]] = { pubkey: sp[0], sig: sp[1], time: sp[2], userid: sp[3], certs: [] };
+        });
+        res.certifications.forEach(function (cert) {
+          var sp = cert.split(':');
+          identities[sp[1]].certs.push({ from: sp[0], to: sp[1], block_number: sp[2], sig: sp[3] });
+        });
+        console.log('Block #%s...', blockNumber);
+        async.forEachSeries(res.identities, function (inlineIdty, callback) {
+          async.waterfall([
+            function (next) {
+              var sp = inlineIdty.split(':');
+              var pub = sp[0];
+              var sig = sp[1];
+              var ts = sp[2];
+              var uid = sp[3];
+              var raw = "";
+              raw += "UID:" + uid + '\n';
+              raw += "META:TS:" + ts + '\n';
+              raw += sig;
+              var certs = "";
+              identities[pub].certs.forEach(function (cert) {
+                certs += [cert.from, cert.to, cert.block_number, cert.sig].join(':') + '\n';
+              });
+              vucoin(host, port, function (err, tgtNode) {
+                if (err) {
+                  console.error(err);
+                  process.exit(1);
+                }
+                tgtNode.wot.add(pub, raw, certs, function (err) {
+                  if (err) console.error('Error:', err);
+                  else console.log('Successfully sent identity ' + uid);
                 });
                 next();
               });
