@@ -482,6 +482,54 @@ program
   }));
 
 program
+  .command('import-lookup [uid] [blockNumber] [host] [port]')
+  .description('Import identities from -h host and send them to remote [host]')
+  .action(withConnection(function (node, uid, blockNumber, host, port) {
+    async.waterfall([
+      function (next){
+        node.wot.lookup(uid, next);
+      },
+      function (res, next){
+        async.forEachSeries(res.results, function (entry, callback) {
+          var pub = entry.pubkey;
+          async.forEachSeries(entry.uids, function (user, callback2) {
+            async.waterfall([
+              function (next) {
+                var uid = user.uid;
+                var sig = user.self;
+                var ts = user.meta.timestamp;
+                var raw = "";
+                raw += "UID:" + uid + '\n';
+                raw += "META:TS:" + ts + '\n';
+                raw += sig;
+                var certs = "";
+                // user.others.forEach(function (cert) {
+                //   certs += [cert.pubkey, pub, cert.meta.block_number, cert.signature].join(':') + '\n';
+                // });
+                if (!certs) {
+                  raw += '\n';
+                }
+                vucoin(host, port, function (err, tgtNode) {
+                  if (err) {
+                    console.error(err);
+                    process.exit(1);
+                  }
+                  tgtNode.wot.add(pub, raw, certs, function (err) {
+                    if (err) console.error('Error:', err);
+                    else console.log('Successfully sent identity ' + uid);
+                  });
+                  next();
+                });
+              }
+            ], callback2);
+          }, callback);
+        }, next);
+      },
+    ], handleError(function (res) {
+    }));
+  }));
+
+program
   .command('transfer [amount] [recipient]')
   .description('Transfer an amount of coins to a single recipient.')
   .action(withConnectionAndKeyPair(function (node, pub, sec, amount, recipient) {
