@@ -30,6 +30,13 @@ function vuCoin(host, port, intialized){
     }
   };
 
+  this.currency = {
+
+    parameters: function (done) {
+      get('/blockchain/parameters', done);
+    }
+  };
+
   this.blockchain = {
 
     parameters: function (done) {
@@ -49,7 +56,24 @@ function vuCoin(host, port, intialized){
     block: function (number, done) {
       getBlock('/blockchain/block/' + number, done);
     },
+
+    with: {
+      newcomers: getStatFunc('newcomers'),
+      certs: getStatFunc('certs'),
+      joiners: getStatFunc('joiners'),
+      actives: getStatFunc('actives'),
+      leavers: getStatFunc('leavers'),
+      excluded: getStatFunc('excluded'),
+      ud: getStatFunc('ud'),
+      tx: getStatFunc('tx')
+    }
   };
+
+  function getStatFunc (statName) {
+    return function (done) {
+      getStat('/blockchain/with/' + statName, done);
+    };
+  }
 
   this.tx = {
 
@@ -334,6 +358,12 @@ function vuCoin(host, port, intialized){
   function getBlock (url, callback) {
     get(url, function (err, res, body) {
       callback(err, sanitize(res, ResultTypes.Block));
+    });
+  }
+
+  function getStat (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Stat));
     });
   }
 
@@ -641,6 +671,11 @@ ResultTypes.MerkleWithLeaf = {
 ResultTypes.Stream = {
   "peers": [String]
 };
+ResultTypes.Stat = {
+  "result": {
+    "blocks": [Number]
+  }
+};
 ResultTypes.Block = {
   "version": Number,
   "currency": String,
@@ -651,6 +686,7 @@ ResultTypes.Block = {
   "issuer": String,
   "parameters": String,
   "membersCount": Number,
+  "monetaryMass": Number,
   "hash": String,
   "previousHash": String,
   "previousIssuer": String,
