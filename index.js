@@ -27,6 +27,18 @@ function vuCoin(host, port, intialized){
 
     lookup: function (search, done) {
       getLookup('/wot/lookup/' + encodeURIComponent(search), done);
+    },
+
+    members: function (done) {
+      getWoTMembers('/wot/members', done);
+    },
+
+    certifiersOf: function (search, done) {
+      getWoTCerts('/wot/certifiers-of/' + search, done);
+    },
+
+    certifiedBy: function (search, done) {
+      getWoTCerts('/wot/certified-by/' + search, done);
     }
   };
 
@@ -337,6 +349,18 @@ function vuCoin(host, port, intialized){
     });
   }
 
+  function getWoTMembers (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.WoTMembers));
+    });
+  }
+
+  function getWoTCerts (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.WoTCerts));
+    });
+  }
+
   function getPeer (url, callback) {
     get(url, function (err, res, body) {
       callback(err, sanitize(res, ResultTypes.Peer));
@@ -636,6 +660,26 @@ ResultTypes.Lookup = {
         "signature": String
       }]
     }]
+  }]
+};
+ResultTypes.WoTMembers = {
+  "results": [{
+    "pubkey": String,
+    "uid": String
+  }]
+};
+ResultTypes.WoTCerts = {
+  "pubkey": String,
+  "uid": String,
+  "certifications": [{
+    "pubkey": String,
+    "uid": String,
+    "cert_time": {
+      "block": Number,
+      "medianTime": Number
+    },
+    "written": Boolean,
+    "signature": String
   }]
 };
 ResultTypes.Peer = {
