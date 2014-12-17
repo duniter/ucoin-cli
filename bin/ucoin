@@ -19,6 +19,7 @@ var stdinData = '';
 
 // Consts
 var NO_AUTH = false;
+var REG_PUBKEY = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{43,44}$/;
 
 // Default values
 program.host = "localhost";
@@ -250,36 +251,9 @@ program
   .action(withConnection(function (node, uid) {
     async.waterfall([
       function (next){
-        node.wot.lookup(uid, next);
-      },
-      function (res, next){
         async.parallel({
           sCert: function (next) {
-            var matches = [];
-            var hash = {};
-            res.results.forEach(function(pubres){
-              pubres.uids.forEach(function(uidres){
-                var day = moment.unix(uidres.meta.timestamp);
-                var id = [uidres.uid, day.format('lll'), uidres.self.substring(0, 8)].join(' ');
-                hash[id] = { pub: pubres.pubkey, uid: uidres.uid, time: uidres.meta.timestamp, sig: uidres.self };
-                matches.push(id);
-              });
-            });
-            if (matches.length == 0)
-              next('No matching identity found on server');
-            else {
-              if (matches.length == 1)
-                next(null, hash[matches[matches.length-1]]);
-              else {
-                matches = matches.concat(["None"]);
-                ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
-                  if (said == 'None')
-                    next('Aborted.');
-                  else
-                    next(null, hash[said]);
-                });
-              }
-            }
+            getIdentityOf(uid, node, next);
           },
           blockRef: function (next) {
             async.waterfall([
@@ -349,6 +323,49 @@ program
         console.log(inline);
     }));
   }));
+
+function getIdentityOf (search, node, done) {
+  async.waterfall([
+    function (next){
+      node.wot.lookup(search, next);
+    },
+    function (res, next) {
+      var matches = [];
+      var hash = {};
+      res.results.forEach(function(pubres){
+        pubres.uids.forEach(function(uidres){
+          var day = moment.unix(uidres.meta.timestamp);
+          var id = [uidres.uid, day.format('lll'), uidres.self.substring(0, 8)].join(' ');
+          hash[id] = { pub: pubres.pubkey, uid: uidres.uid, time: uidres.meta.timestamp, sig: uidres.self };
+          matches.push(id);
+        });
+      });
+      if (matches.length == 0)
+        next('No matching identity found on server');
+      else {
+        if (matches.length == 1)
+          next(null, hash[matches[matches.length-1]]);
+        else {
+          matches = matches.concat(["None"]);
+          ask.pick("Which one to sign?", matches, matches[matches.length-1], function (err, said) {
+            if (said == 'None')
+              next('Aborted.');
+            else
+              next(null, hash[said]);
+          });
+        }
+      }
+    }
+  ], done);
+}
+
+function getPubkeyOf (search, node, done) {
+  if (search.match(REG_PUBKEY)) {
+    next(null, { pub: search });
+  } else {
+    getIdentityOf(search, node, done);
+  }
+}
 
 function sign (msg, done) {
   async.waterfall([
@@ -565,10 +582,11 @@ program
           next('You do not have enough coins! (' + cumulated + ' ' + currency + ' left)');
         }
         else {
-          next();
+          getPubkeyOf(recipient, node, next);
         }
       },
-      function (next){
+      function (idty, next){
+        var recipient = idty.pub;
         var inputSum = 0;
         var issuer = base58.encode(pub);
         raw += "Version: 1" + '\n';
@@ -617,8 +635,8 @@ program
   }));
 
 program
-  .command('balance [pubkey]')
-  .description('Show available sources & computed balance of given pubkey.')
+  .command('balance [uid|pubkey]')
+  .description('Show available sources & computed balance of given uid|pubkey.')
   .action(withConnection(function (node, pubkey) {
     if(!pubkey){
       console.error('pubkey is required');
@@ -626,6 +644,18 @@ program
     }
     var sources = [];
     async.waterfall([
+      function (next) {
+        // Get the pubkey from pubkey|uid parameter
+        async.waterfall([
+          function (next) {
+            getPubkeyOf(pubkey, node, next);
+          },
+          function (idty, next) {
+            pubkey = idty.pub;
+            next();
+          }
+        ], next);
+      },
       function (next) {
         node.tx.sources(pubkey, next);
       },
