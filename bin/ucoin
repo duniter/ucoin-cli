@@ -31,7 +31,7 @@ program
   .option('--votefile <voteFile>', 'Vote file to send.')
   .option('--sender <fingerprint>', 'Sender\'s fingerprint.')
   .option('--recipient <fingerprint', 'Recipient\'s fingerprint.')
-  .option('--comment <comment>', 'Comment to add to transaction.')
+  .option('--certs', 'If present with import-lookup, also add certifications of the identity.')
   .option('--transaction <txFile>', 'Transaction file to send.')
   .option('--membership <msFile>', 'Membership file to send.')
   .option('-c, --currency <name>', 'Currency name.')
@@ -482,9 +482,9 @@ program
   }));
 
 program
-  .command('import-lookup [uid] [blockNumber] [host] [port]')
+  .command('import-lookup [uid] [host] [port]')
   .description('Import identities from -h host and send them to remote [host]')
-  .action(withConnection(function (node, uid, blockNumber, host, port) {
+  .action(withConnection(function (node, uid, host, port) {
     async.waterfall([
       function (next){
         node.wot.lookup(uid, next);
@@ -503,9 +503,11 @@ program
                 raw += "META:TS:" + ts + '\n';
                 raw += sig;
                 var certs = "";
-                // user.others.forEach(function (cert) {
-                //   certs += [cert.pubkey, pub, cert.meta.block_number, cert.signature].join(':') + '\n';
-                // });
+                if (program.certs) {
+                  user.others.forEach(function (cert) {
+                    certs += [cert.pubkey, pub, cert.meta.block_number, cert.signature].join(':') + '\n';
+                  });
+                }
                 if (!certs) {
                   raw += '\n';
                 }
