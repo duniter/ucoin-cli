@@ -691,7 +691,6 @@ program
           choices[proposal] = src;
           proposals.push(proposal);
         });
-        console.log(choices);
         var selected = [];
         var totalAmount = 0;
         async.doWhilst(
