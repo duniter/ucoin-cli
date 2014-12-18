@@ -369,19 +369,53 @@ function getPubkeyOf (search, node, done) {
 
 function sign (msg, done) {
   async.waterfall([
-    function (next){
-      if (program.passwd) next(null, program.passwd);
-      else ask.password(next);
-    },
-    function (passwd, next){
-      crypto.getKeyPair(passwd, program.salt, next);
-    },
+    async.apply(getKeyPair),
     function (pair, next){
       crypto.sign(msg, pair.secretKey, function (err, sig) {
         next(err, sig, pair.publicKey);
       });
     },
   ], done);
+}
+
+function getKeyPair (done) {
+  async.waterfall([
+    function (next) {
+      async.series({
+        salt: getSalt,
+        passwd: getPasswd
+      }, next);
+    },
+    function (res, next) {
+      crypto.getKeyPair(res.passwd, program.salt, next);
+    }
+  ], done);
+}
+
+function askSaltAndPasswd (done) {
+  async.waterfall([
+    function (next) {
+      async.series({
+        salt: getSalt,
+        passwd: getPasswd
+      }, next);
+    },
+    function (res, next) {
+      program.salt = res.salt;
+      program.passwd = res.passwd;
+      next();
+    }
+  ], done);
+}
+
+function getSalt (done) {
+  if (program.salt) done(null, program.salt);
+  else ask.password('Salt', done);
+}
+
+function getPasswd (done) {
+  if (program.passwd) done(null, program.passwd);
+  else ask.password('Password', done);
 }
 
 program
@@ -553,6 +587,7 @@ program
   .description('Transfer an amount of coins to a single recipient.')
   .action(withConnectionAndKeyPair(function (node, pub, sec, amount, recipient) {
     var sources = [];
+    var choices = {};
     var currency = '';
     var raw = "";
     async.waterfall([
@@ -567,7 +602,7 @@ program
         currency = json.currency;
         var i = 0;
         var cumulated = 0;
-        while (cumulated < amount && i < json.sources.length) {
+        while (i < json.sources.length) {
           var src = json.sources[i];
           sources.push({
             'type': src.type,
@@ -585,8 +620,43 @@ program
           getPubkeyOf(recipient, node, next);
         }
       },
-      function (idty, next){
-        var recipient = idty.pub;
+      function (idty, next) {
+        recipient = idty.pub;
+        var proposals = [];
+        sources.forEach(function (src) {
+          var proposal = [src.type, src.number, src.hash.substring(32)].join(':') + ' (' + src.amount + ' coins)';
+          choices[proposal] = src;
+          proposals.push(proposal);
+        });
+        console.log(choices);
+        var selected = [];
+        var totalAmount = 0;
+        async.doWhilst(
+          function (next) {
+            async.waterfall([
+              async.apply(ask.select, 'Which sources to spend?', proposals, proposals[0]),
+              function (selections, next) {
+                totalAmount = 0;
+                selections.forEach(function (item) {
+                  var src = choices[item];
+                  selected.push(src);
+                  totalAmount += src.amount;
+                });
+                next();
+              }
+            ], next);
+          },
+          function () {
+            var notEnough = totalAmount < amount;
+            if (notEnough) console.log('\n/!\\ Total amount is below ' + amount + '! Choose other sources.\n');
+            return notEnough;
+          },
+          function (err) {
+            next(err, selected);
+          }
+        );
+      },
+      function (sources, next){
         var inputSum = 0;
         var issuer = base58.encode(pub);
         raw += "Version: 1" + '\n';
@@ -606,11 +676,23 @@ program
           raw += [issuer, inputSum - amount].join(':') + '\n';
         }
         raw += "Comment: \n";
+        var toBeSigned = raw;
+        if (program.yes)
+          next(null, toBeSigned, blockNumber, sCert.pub);
+        else {
+          console.log('-----------------');
+          console.log(toBeSigned);
+          console.log('-----------------');
+          ask.choose('You are about to sign this transaction, continue?', false,
+            async.apply(next, null, toBeSigned),
+            async.apply(next, 'Aborted.'));
+        }
+      },
+      function (raw, next){
         sign(raw, next);
       },
       function (sig, pub, next) {
         raw += sig + '\n';
-        console.log(raw);
         node.tx.process(raw, function (err) {
           if (err) console.error('Error:', err);
           else console.log('Successfully sent transaction.');
@@ -946,26 +1028,33 @@ function withConnectionAndKeyPair (parameters, done) {
     done = parameters;
     parameters = [];
   }
-  return withParams(['host', 'port', 'salt', 'passwd'].concat(parameters), function () {
+  return withParams(['host', 'port'].concat(parameters), function () {
     var args = Array.prototype.slice.call(arguments);
-    async.parallel({
-      node: function (next) {
-        vucoin(program.host, program.port, function (err, node) {
-          if (err) {
-            console.error(err);
-            process.exit(1);
-          }
-          next.apply(next, [null, node]);
-        });
+    async.waterfall([
+      function (next) {
+        askSaltAndPasswd(next);
       },
-      keys: function (next) {
-        crypto.getKeyPair(program.passwd, program.salt, function (err, pair) {
-          next.apply(next, [null, pair.publicKey, pair.secretKey]);
+      function (next) {
+        async.parallel({
+          node: function (next) {
+            vucoin(program.host, program.port, function (err, node) {
+              if (err) {
+                console.error(err);
+                process.exit(1);
+              }
+              next.apply(next, [null, node]);
+            });
+          },
+          keys: function (next) {
+            crypto.getKeyPair(program.passwd, program.salt, function (err, pair) {
+              next.apply(next, [null, pair.publicKey, pair.secretKey]);
+            });
+          }
+        }, function (err, res) {
+          next.apply(next, [res.node].concat(res.keys).concat(args));
         });
       }
-    }, function (err, res) {
-      done.apply(done, [res.node].concat(res.keys).concat(args));
-    });
+    ], done);
   });
 }
 
