@@ -361,7 +361,7 @@ function getIdentityOf (search, node, done) {
 
 function getPubkeyOf (search, node, done) {
   if (search.match(REG_PUBKEY)) {
-    next(null, { pub: search });
+    done(null, { pub: search });
   } else {
     getIdentityOf(search, node, done);
   }
