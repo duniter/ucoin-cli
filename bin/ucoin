@@ -583,6 +583,69 @@ program
   }));
 
 program
+  .command('wotviz')
+  .description('Exports current Web of Trust under .dot file format (graphviz usage)')
+  .action(withConnection(function (node) {
+    var links = [];
+    var mapLinks = {};
+    async.waterfall([
+      async.apply(node.wot.members),
+      function (json, next) {
+        async.forEach(json.results, function (member, callback) {
+          async.waterfall([
+            async.apply(node.wot.certifiedBy, member.uid),
+            function (res, next) {
+              mapLinks[member.uid] = [];
+              res.certifications.forEach(function (cert) {
+                mapLinks[member.uid].push(cert.uid);
+              });
+              next();
+            }
+          ], callback);
+        }, next);
+      },
+      function (next) {
+        var members = _(mapLinks).keys();
+        var bidirectionnals = {};
+        members.forEach(function (source) {
+          bidirectionnals[source] = [];
+          members.forEach(function (target) {
+            if (~mapLinks[target].indexOf(source) && ~mapLinks[source].indexOf(target)) {
+              bidirectionnals[source].push(target);
+            }
+          });
+        });
+        var bidirs = [];
+        members.forEach(function (member) {
+          mapLinks[member].forEach(function (target) {
+            if (~bidirectionnals[member].indexOf(target)) {
+              var notYetWritten = bidirs.indexOf(member + target) == -1;
+              if (notYetWritten) {
+                links.push('"' + member + '" -> "' + target + '" [dir=both];');
+                bidirs.push(member + target);
+                bidirs.push(target + member);
+              }
+            }
+            else
+              links.push('"' + member + '" -> "' + target + '" [color=gray];');
+          });
+        });
+        next();
+      },
+      function (next) {
+        var content = 'digraph G {\n';
+        links.forEach(function (lnk) {
+          content += '\t' + lnk + '\n';
+        });
+        content += '}'
+        console.log(content);
+        next();
+      }
+    ], handleError(function (res) {
+    }));
+  }));
+
+program
   .command('transfer [amount] [recipient]')
   .description('Transfer an amount of coins to a single recipient.')
   .action(withConnectionAndKeyPair(function (node, pub, sec, amount, recipient) {
