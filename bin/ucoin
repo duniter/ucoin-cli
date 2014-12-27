@@ -311,7 +311,7 @@ program
           target,
           lines.slice(lines.length-1)
         ].join(':') + '\n';
-        next(null, inline, sPub, lines.slice(0, 3).join('\n'));
+        next(null, inline, sPub, lines.slice(0, 3).join('\n') + '\n');
       },
     ], handleError(function (inline, sPub, selfCert) {
       if (program.send)
@@ -646,9 +646,9 @@ program
   }));
 
 program
-  .command('transfer [amount] [recipient]')
+  .command('transfer [amount] [recipient] [comment]')
   .description('Transfer an amount of coins to a single recipient.')
-  .action(withConnectionAndKeyPair(function (node, pub, sec, amount, recipient) {
+  .action(withConnectionAndKeyPair(function (node, pub, sec, amount, recipient, comment) {
     var sources = [];
     var choices = {};
     var currency = '';
@@ -737,7 +737,7 @@ program
           // Rest back to issuer
           raw += [issuer, inputSum - amount].join(':') + '\n';
         }
-        raw += "Comment: \n";
+        raw += "Comment: " + (comment || "") + "\n";
         var toBeSigned = raw;
         if (program.yes)
           next(null, toBeSigned, blockNumber, sCert.pub);
