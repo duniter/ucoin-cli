@@ -324,6 +324,50 @@ program
     }));
   }));
 
+program
+  .command('revoke [uid]')
+  .description('Revoke an identity matching <ui> found on remote server')
+  .action(withConnection(function (node, uid) {
+    async.waterfall([
+      function (next){
+        async.parallel({
+          sCert: function (next) {
+            getIdentityOf(uid, node, next);
+          },
+        }, next);
+      },
+      function (res, next){
+        var sCert = res.sCert;
+        var toBeSigned = ['UID:' + sCert.uid, 'META:TS:' + sCert.time, sCert.sig, 'META:REVOKE', ''].join('\n');
+        var selfCert = ['UID:' + sCert.uid, 'META:TS:' + sCert.time, sCert.sig, ''].join('\n');
+        if (program.yes)
+          next(null, toBeSigned, selfCert, sCert.pub);
+        else {
+          console.log('-----------------');
+          console.log(toBeSigned);
+          console.log('-----------------');
+          ask.choose('You are about to revoke this identity, continue?', false,
+            async.apply(next, null, toBeSigned, selfCert, sCert.pub),
+            async.apply(next, 'Aborted.'));
+        }
+      },
+      function (revocation, selfCert, sPub, next){
+        sign(revocation, function (err, sig, pub){
+          console.log(sig);
+          next(err, sPub, selfCert, sig);
+        });
+      },
+    ], handleError(function (sPub, selfCert, sig) {
+      if (program.send)
+        node.wot.revoke(sPub, selfCert, sig, function (err) {
+          if (err) console.error('Error:', err);
+          else console.log('Successfully sent revocation of \'' + uid + '\'');
+        })
+      if (!program.send && !program.store)
+        console.log(inline);
+    }));
+  }));
+
 function getIdentityOf (search, node, done) {
   async.waterfall([
     function (next){

@@ -25,6 +25,15 @@ function vuCoin(host, port, intialized){
       });
     },
 
+    revoke: function (pubkey, self, sig, done) {
+      post('/wot/revoke', done)
+      .form({
+        "pubkey": pubkey,
+        "self": self,
+        "sig": sig
+      });
+    },
+
     lookup: function (search, done) {
       getLookup('/wot/lookup/' + encodeURIComponent(search), done);
     },
