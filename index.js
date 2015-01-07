@@ -70,6 +70,10 @@ function vuCoin(host, port, intialized){
       }, done);
     },
 
+    memberships: function (search, done) {
+      getMemberships('/blockchain/memberships/' + search, done);
+    },
+
     current: function (done) {
       getBlock('/blockchain/current', done);
     },
@@ -460,6 +464,12 @@ function vuCoin(host, port, intialized){
     });
   }
 
+  function getMemberships (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Memberships));
+    });
+  }
+
   function getMembershipHistory (url, callback) {
     get(url, function (err, res, body) {
       callback(err, sanitize(res, ResultTypes.MembershipHistory));
@@ -831,6 +841,20 @@ ResultTypes.Membership = {
 };
 ResultTypes.MembershipHistory = {
   "memberships": [ResultTypes.Membership]
+};
+ResultTypes.Memberships = {
+  "pubkey": String,
+  "uid": String,
+  "sigDate": Number,
+  "memberships": [
+    {
+      "version": String,
+      "currency": String,
+      "membership": String,
+      "blockNumber": Number,
+      "blockHash": String
+    }
+  ]
 };
 ResultTypes.Voting = {
   "signature": String,
