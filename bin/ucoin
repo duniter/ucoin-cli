@@ -253,6 +253,66 @@ program
     }));
   }));
 
+program
+  .command('leave [uid]')
+  .description('Send \'leave\' membership request.')
+  .action(withKeyPair(function (pub, sec, uid) {
+    var certts = 0;
+    async.waterfall([
+      function (next){
+        if (!uid){
+          next('User ID is required');
+          return;
+        }
+        // Look for possible certts
+        async.waterfall([
+          function (next) {
+            withConnection(function (node){
+              node.blockchain.memberships(decodeURIComponent(uid), next);
+            })();
+          },
+          function (res, next){
+            certts = res.sigDate;
+            next();
+          }
+        ], next);
+      },
+      function (next) {
+        withConnection(function (node) {
+          async.parallel({
+            current: function (next) {
+              node.blockchain.current(function (err, current) {
+                next(null, err ? null : current);
+              });
+            },
+            parameters: function (next) {
+              node.blockchain.parameters(function (err, json) {
+                next(err, json);
+              });
+            }
+          }, next);
+        })();
+      },
+      function (res, next){
+        var number = res.current ? res.current.number : 0;
+        var hash = res.current ? res.current.hash : 'DA39A3EE5E6B4B0D3255BFEF95601890AFD80709';
+        createMembership('OUT', res.parameters.currency, pub, sec, number, hash, uid, certts, next);
+      },
+    ], handleError(function (signedMS) {
+      if (program.store)
+        writeInHome("leave", signedMS);
+      if (program.send)
+        withConnection(function (node) {
+          node.blockchain.membership(signedMS, function (err) {
+            if (err) console.error('Error:', err);
+            else console.log('Successfully sent leave membership.');
+          })
+        })();
+      if (!program.send && !program.store)
+        process.stdout.write(signedMS);
+    }));
+  }));
+
 function createMembership (type, currency, pub, sec, number, hash, uid, certts, done) {
     var raw = "";
     async.waterfall([
