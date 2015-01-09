@@ -82,6 +82,10 @@ function vuCoin(host, port, intialized){
       getBlock('/blockchain/block/' + number, done);
     },
 
+    blocks: function (count, from, done) {
+      getBlocks('/blockchain/blocks/' + count + '/' + from, done);
+    },
+
     with: {
       newcomers: getStatFunc('newcomers'),
       certs: getStatFunc('certs'),
@@ -395,6 +399,12 @@ function vuCoin(host, port, intialized){
   function getBlock (url, callback) {
     get(url, function (err, res, body) {
       callback(err, sanitize(res, ResultTypes.Block));
+    });
+  }
+
+  function getBlocks (url, callback) {
+    get(url, function (err, res, body) {
+      callback(err, sanitize(res, ResultTypes.Blocks));
     });
   }
 
@@ -758,6 +768,9 @@ ResultTypes.Block = {
   "leavers": [String],
   "excluded": [String],
   "signature": String
+};
+ResultTypes.Blocks = {
+  "blocks": [ResultTypes.Block]
 };
 ResultTypes.Source = {
   "type": String,
