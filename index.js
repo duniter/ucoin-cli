@@ -14,6 +14,13 @@ function vuCoin(host, port, intialized){
   this.host = host;
   this.port = port;
 
+  this.node = {
+
+    summary: function (done) {
+      get('/node/summary', done);
+    }
+  };
+
   this.wot = {
 
     add: function (pubkey, self, other, done) {
