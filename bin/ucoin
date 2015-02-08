@@ -15,6 +15,7 @@ var mkdirp    = require('mkdirp');
 var crypto    = require('../lib/crypto');
 var base58    = require('../lib/base58');
 var ask       = require('../lib/ask');
+var jsonpckg  = require('../package');
 var stdinData = '';
 
 // Consts
@@ -26,7 +27,7 @@ program.host = "localhost";
 program.port = "8081";
 
 program
-  .version('0.23.7')
+  .version(jsonpckg.version)
   .option('--key <keyFile>', 'File of the key to submit.')
   .option('--search <search>', 'Search string')
   .option('--votefile <voteFile>', 'Vote file to send.')
