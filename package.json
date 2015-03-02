@@ -6,10 +6,6 @@
   "directories": {
     "test": "test"
   },
-  "scripts": {
-    "postinstall": "./postinstall.sh",
-    "postuninstall": "./postuninstall.sh"
-  },
   "repository": {
     "type": "git",
     "url": "git@github.com:c-geek/vucoin.git"
@@ -37,10 +33,10 @@
     "underscore": "",
     "mkdirp": "",
     "tweetnacl": "0.11.2",
-    "scrypt": "3.0.1",
+    "scrypt-hash": "1.1.10",
     "inquirer": "~0.5.0",
     "moment": "2.8.3",
-    "naclb": "0.0.1"
+    "naclb": "0.1.0"
   },
   "devDependencies": {
     "mocha": "",
