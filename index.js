@@ -3,11 +3,11 @@ var fs      = require('fs');
 var async   = require('async');
 var openpgp = require('openpgp');
 
-module.exports = function (host, port, intialized){
-  return new vuCoin(host, port, intialized);
+module.exports = function (host, port, intialized, options){
+  return new vuCoin(host, port, intialized, options);
 }
 
-function vuCoin(host, port, intialized){
+function vuCoin(host, port, intialized, options){
 
   var pubkeys = null;
 
@@ -360,7 +360,10 @@ function vuCoin(host, port, intialized){
   }
 
   function get(url, callback) {
-    return require('request').get(requestHead(url), _(vucoin_result).partial(callback));
+    return require('request').get({
+      url: requestHead(url).url,
+      timeout: options.timeout || 4000
+    }, _(vucoin_result).partial(callback));
   }
 
   function post(url, callback) {
