@@ -446,6 +446,70 @@ program
   }));
 
 program
+  .command('net-show')
+  .description('Show current state of known peers of a given peer.')
+  .action(withConnection(function (node) {
+    var sources = [];
+    async.waterfall([
+      function (next) {
+        node.network.peering.peers.get({ leaves: true }, next);
+      },
+      function(json, next) {
+        async.parallel(json.leaves.map(function(leaf) {
+          return function(callback) {
+            var peer;
+            async.waterfall([
+              function(next) {
+                node.network.peering.peers.get({ leaf: leaf }, next);
+              },
+              function(json, next) {
+                peer = json.leaf.value;
+                if (!peer) {
+                  return next('No peer');
+                }
+                if (!peer.endpoints || peer.endpoints.length == 0) {
+                  return next('No endpoint');
+                }
+                var match = peer.endpoints[0].match(/^BASIC_MERKLED_API( ([a-z_][a-z0-9-_.]*))?( ([0-9.]+))?( ([0-9a-f:]+))?( ([0-9]+))$/);
+                if (!match) {
+                  return next('No valid endpoint');
+                }
+                peer.host = match[2] || match[4] || match[6];
+                peer.port = match[8];
+                vucoin(peer.host, peer.port, next, { timeout: 1000 });
+              },
+              function(peerNode, next) {
+                peerNode.blockchain.current(next);
+              }
+            ], function(err, data) {
+              callback(null, { error: err, data: data, peer: peer });
+            });
+          }
+        }), next);
+      },
+      function (results, next){
+        var table = new Table({
+          head: ['Key', 'Host', 'Port', 'State'],
+          colWidths: [],
+          chars: {'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+            , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+            , 'left': '' , 'left-mid': '-' , 'mid': '-' , 'mid-mid': '-'
+            , 'right': '' , 'right-mid': '' , 'middle': ' | ' },
+          style: { 'padding-left': 0, 'padding-right': 0, compact : true }
+        });
+
+        results = _.sortBy(results, function(res){ return !!res.error; });
+        results.forEach(function (res) {
+          table.push([res.peer.pubkey, res.peer.host, res.peer.port, res.error ? (res.error.code || res.error) : res.data.number]);
+        });
+        console.log(table.toString());
+        next();
+      }
+    ], handleError(function (res) {
+    }));
+  }));
+
+program
   .command('revoke [uid]')
   .description('Revoke an identity matching <ui> found on remote server')
   .action(withConnection(function (node, uid) {
