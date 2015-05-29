@@ -485,7 +485,7 @@ program
           else console.log('Successfully sent revocation of \'' + uid + '\'');
         })
       if (!program.send && !program.store)
-        console.log(inline);
+        console.log([selfCert, sig].join('\n'));
     }));
   }));
 
