@@ -1,7 +1,5 @@
 var _       = require('underscore');
-var fs      = require('fs');
 var async   = require('async');
-var openpgp = require('openpgp');
 
 module.exports = function (host, port, intialized, options){
   return new vuCoin(host, port, intialized, options);

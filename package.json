@@ -33,14 +33,13 @@
     "merkle": "~0.1.0",
     "hdc": "~0.7.0",
     "cli-table": "*",
-    "openpgp": "0.5.1",
     "underscore": "",
     "mkdirp": "",
     "tweetnacl": "0.11.2",
     "scrypt": "4.0.7",
     "inquirer": "~0.5.0",
     "moment": "2.8.3",
-    "naclb": "0.0.1"
+    "naclb": "0.2.1"
   },
   "devDependencies": {
     "mocha": "",
