@@ -195,45 +195,6 @@ program
   }));
 
 program
-  .command('read-join [filename]')
-  .description('Send join membership request.')
-  .action(function (filename) {
-    async.waterfall([
-      function (next){
-        var data = fs.readFileSync(filename, 'utf8');
-        var json = JSON.parse(data);
-        var raw = "";
-        raw += "Version: 1" + '\n';
-        raw += "Type: Membership" + '\n';
-        raw += "Currency: " + json.currency + '\n';
-        raw += "Issuer: " + json.issuer + '\n';
-        raw += "Block: " + json.block + '\n';
-        raw += "Membership: " + json.membership + '\n';
-        if (json.userid) {
-          raw += "UserID: " + json.userid + '\n';
-        }
-        if (json.certts) {
-          raw += "CertTS: " + json.certts + '\n';
-        }
-        raw += json.signature + '\n';
-        next(null, raw);
-      }
-    ], handleError(function (signedMS) {
-      if (program.store)
-        writeInHome("join", signedMS);
-      if (program.send)
-        withConnection(function (node) {
-          node.blockchain.membership(signedMS, function (err) {
-            if (err) console.error('Error:', err);
-            else console.log('Successfully sent join membership.');
-          })
-        })();
-      if (!program.send && !program.store)
-        process.stdout.write(signedMS);
-    }));
-  });
-
-program
   .command('renew [uid]')
   .description('Send active membership request.')
   .action(withKeyPair(function (pub, sec, uid) {
