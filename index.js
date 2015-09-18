@@ -145,10 +145,8 @@ function vuCoin(host, port, intialized, options){
         },
 
         post: function (entry, done) {
-          var sigIndex = entry.indexOf("-----BEGIN");
           postPeer('/network/peering/peers', {
-            "entry": entry.substring(0, sigIndex),
-            "signature": entry.substring(sigIndex)
+            "peer": entry
           }, done);
         },
 

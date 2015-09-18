@@ -500,7 +500,7 @@ program
 
         results = _.sortBy(results, function(res){ return !!res.error; });
         results.forEach(function (res) {
-          table.push([res.peer.pubkey, res.peer.host, res.peer.port, res.error ? (res.error.code || res.error) : res.data.number]);
+          table.push([res.peer.pubkey || '', res.peer.host || '', res.peer.port || '', res.error ? (res.error.code || res.error) : res.data.number]);
         });
         console.log(table.toString());
         next();
@@ -508,6 +508,107 @@ program
     ], handleError(function (res) {
     }));
   }));
+
+program
+  .command('fwd-peers [host] [port] [depth]')
+  .description('Forward peers')
+  .action(withConnection(function (node, host, port) {
+    var resultsMap = {};
+    async.waterfall([
+      function(next) {
+        crawlPeers(host, port, resultsMap, next);
+      },
+      function (next){
+        var results = _.values(resultsMap);
+        var table = new Table({
+          head: ['Key', 'Host', 'Port'],
+          colWidths: [],
+          chars: {'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
+            , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
+            , 'left': '' , 'left-mid': '-' , 'mid': '-' , 'mid-mid': '-'
+            , 'right': '' , 'right-mid': '' , 'middle': ' | ' },
+          style: { 'padding-left': 0, 'padding-right': 0, compact : true }
+        });
+
+        results = _.sortBy(results, function(res){ return !!res.error; });
+        results.forEach(function (res) {
+          table.push([res.peer.pubkey || '', res.peer.host || '', res.peer.port || '']);
+        });
+        console.log(table.toString());
+        next();
+      }
+    ], handleError(function (res) {
+    }));
+  }));
+
+function crawlPeers(host, port, resultMap, done) {
+  var sourceNode;
+  async.waterfall([
+    function(next) {
+      vucoin(host, port, next, { timeout: 2000 });
+    },
+    function(peerNode, next) {
+      sourceNode = peerNode;
+      async.waterfall([
+        function (next) {
+          sourceNode.network.peering.get(next);
+        },
+        function(peer, next) {
+          if (!peer) {
+            return next('No peer');
+          }
+          if (!peer.endpoints || peer.endpoints.length == 0) {
+            return next('No endpoint');
+          }
+          var match = peer.endpoints[0].match(/^BASIC_MERKLED_API( ([a-z_][a-z0-9-_.]*))?( ([0-9.]+))?( ([0-9a-f:]+))?( ([0-9]+))$/);
+          if (!match) {
+            return next('No valid endpoint');
+          }
+          peer.host = match[2] || match[4] || match[6];
+          peer.port = match[8];
+          next(null, peer);
+        }
+      ], function(err, peer) {
+        resultMap[peer.pubkey] = { error: err, peer: peer };
+        sourceNode.network.peering.peers.get({ leaves: true }, next);
+      });
+    },
+    function(json, next) {
+      async.parallel(json.leaves.map(function(leaf) {
+        return function(callback) {
+          var peer;
+          async.waterfall([
+            function (next) {
+              sourceNode.network.peering.peers.get({ leaf: leaf }, next);
+            },
+            function(json, next) {
+              peer = json.leaf.value;
+              if (!peer) {
+                return next('No peer');
+              }
+              if (resultMap[peer.pubkey]) {
+                return next('Already processed');
+              }
+              if (!peer.endpoints || peer.endpoints.length == 0) {
+                return next('No endpoint');
+              }
+              var match = peer.endpoints[0].match(/^BASIC_MERKLED_API( ([a-z_][a-z0-9-_.]*))?( ([0-9.]+))?( ([0-9a-f:]+))?( ([0-9]+))$/);
+              if (!match) {
+                return next('No valid endpoint');
+              }
+              peer.host = match[2] || match[4] || match[6];
+              peer.port = match[8];
+              crawlPeers(peer.host, peer.port, resultMap, next);
+            }
+          ], function() {
+            callback();
+          });
+        }
+      }), next);
+    }], function(err) {
+      done(err);
+    });
+}
 
 program
   .command('revoke [uid]')
@@ -1425,3 +1526,24 @@ Date.prototype.utcZero = function(){
 Date.prototype.timestamp = function(){
   return Math.floor(this.getTime() / 1000);
 };
+
+
+function getRawSignedPeer(json) {
+  var raw = "";
+  raw += "Version: " + json.version + "\n";
+  raw += "Type: Peer\n";
+  raw += "Currency: " + json.currency + "\n";
+  raw += "PublicKey: " + json.pubkey + "\n";
+  raw += "Block: " + json.block + "\n";
+  raw += "Endpoints:" + "\n";
+  (json.endpoints || []).forEach(function(ep){
+    raw += ep + "\n";
+  });
+  if (json.signature)
+    raw += json.signature + '\n';
+  return dos2unix(raw);
+}
+
+function dos2unix(str){
+  return str.replace(/\r\n/g, '\n');
+}
