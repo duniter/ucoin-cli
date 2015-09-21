@@ -518,6 +518,13 @@ program
       function(next) {
         crawlPeers(host, port, resultsMap, next);
       },
+      function(next) {
+        async.forEach(_.keys(resultsMap), function(pubkey, callback) {
+          node.network.peering.peers.post(getRawSignedPeer(resultsMap[pubkey].peer), function(err) {
+            callback();
+          });
+        }, next);
+      },
       function (next){
         var results = _.values(resultsMap);
         var table = new Table({

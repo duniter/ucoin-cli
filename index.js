@@ -78,7 +78,7 @@ function vuCoin(host, port, intialized, options){
     },
 
     memberships: function (search, done) {
-      getMemberships('/blockchain/memberships/' + search, done);
+      getMemberships('/blockchain/memberships/' + search, done);qs
     },
 
     current: function (done) {
