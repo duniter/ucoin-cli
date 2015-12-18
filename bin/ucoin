@@ -476,20 +476,21 @@ program
                 }
                 peer.host = match[2] || match[4] || match[6];
                 peer.port = match[8];
+                peer.record = peer.block.substr(0, 15);
                 vucoin(peer.host, peer.port, next, { timeout: 1000 });
               },
               function(peerNode, next) {
                 peerNode.blockchain.current(next);
               }
             ], function(err, data) {
-              callback(null, { error: err, data: data, peer: peer });
+              callback(null, { error: err, data: data, peer: peer || {} });
             });
           }
         }), next);
       },
       function (results, next){
         var table = new Table({
-          head: ['Key', 'Host', 'Port', 'State'],
+          head: ['Key', 'Host', 'Port', 'State', 'Record'],
           colWidths: [],
           chars: {'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': ''
             , 'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 'bottom-right': ''
@@ -500,7 +501,7 @@ program
 
         results = _.sortBy(results, function(res){ return !!res.error; });
         results.forEach(function (res) {
-          table.push([res.peer.pubkey || '', res.peer.host || '', res.peer.port || '', res.error ? (res.error.code || res.error) : res.data.number]);
+          table.push([res.peer.pubkey || '', res.peer.host || '', res.peer.port || '', res.error ? (res.error.code || res.error) : res.data.number, res.peer.record ]);
         });
         console.log(table.toString());
         next();
@@ -510,16 +511,19 @@ program
   }));
 
 program
-  .command('fwd-peers [host] [port] [depth]')
+  .command('fwd-peers-from [host] [port] [depth]')
   .description('Forward peers')
   .action(withConnection(function (node, host, port) {
     var resultsMap = {};
+    var resultsMapIP = {};
     async.waterfall([
       function(next) {
-        crawlPeers(host, port, resultsMap, next);
+        crawlPeers(host, port, resultsMap, resultsMapIP, next);
       },
       function(next) {
         async.forEach(_.keys(resultsMap), function(pubkey, callback) {
+          if (!pubkey || pubkey == "undefined") return callback();
+          console.log('POST %s to %s', pubkey, [host, port].join(':'));
           node.network.peering.peers.post(getRawSignedPeer(resultsMap[pubkey].peer), function(err) {
             callback();
           });
@@ -548,10 +552,15 @@ program
     }));
   }));
 
-function crawlPeers(host, port, resultMap, done) {
+function crawlPeers(host, port, resultMap, resultsMapIP, done) {
+  // Do not crawl twice the same node
+  if (resultsMapIP[[host, port].join(':')]) return done();
+  // Avoid future crawling on this address
+  resultsMapIP[[host, port].join(':')] = {};
   var sourceNode;
   async.waterfall([
     function(next) {
+      console.log('Crawling %s:%s', host, port);
       vucoin(host, port, next, { timeout: 2000 });
     },
     function(peerNode, next) {
@@ -577,41 +586,40 @@ function crawlPeers(host, port, resultMap, done) {
         }
       ], function(err, peer) {
         resultMap[peer.pubkey] = { error: err, peer: peer };
+        resultsMapIP[[host, port].join(':')] = { error: err, peer: peer };
         sourceNode.network.peering.peers.get({ leaves: true }, next);
       });
     },
     function(json, next) {
-      async.parallel(json.leaves.map(function(leaf) {
-        return function(callback) {
-          var peer;
-          async.waterfall([
-            function (next) {
-              sourceNode.network.peering.peers.get({ leaf: leaf }, next);
-            },
-            function(json, next) {
-              peer = json.leaf.value;
-              if (!peer) {
-                return next('No peer');
-              }
-              if (resultMap[peer.pubkey]) {
-                return next('Already processed');
-              }
-              if (!peer.endpoints || peer.endpoints.length == 0) {
-                return next('No endpoint');
-              }
-              var match = peer.endpoints[0].match(/^BASIC_MERKLED_API( ([a-z_][a-z0-9-_.]*))?( ([0-9.]+))?( ([0-9a-f:]+))?( ([0-9]+))$/);
-              if (!match) {
-                return next('No valid endpoint');
-              }
-              peer.host = match[2] || match[4] || match[6];
-              peer.port = match[8];
-              crawlPeers(peer.host, peer.port, resultMap, next);
+      async.forEach(json.leaves, function(leaf, callback) {
+        var peer;
+        async.waterfall([
+          function (next) {
+            sourceNode.network.peering.peers.get({ leaf: leaf }, next);
+          },
+          function(json, next) {
+            peer = json.leaf.value;
+            if (!peer) {
+              return next('No peer');
             }
-          ], function() {
-            callback();
-          });
-        }
-      }), next);
+            if (resultMap[peer.pubkey]) {
+              return next('Already processed');
+            }
+            if (!peer.endpoints || peer.endpoints.length == 0) {
+              return next('No endpoint');
+            }
+            var match = peer.endpoints[0].match(/^BASIC_MERKLED_API( ([a-z_][a-z0-9-_.]*))?( ([0-9.]+))?( ([0-9a-f:]+))?( ([0-9]+))$/);
+            if (!match) {
+              return next('No valid endpoint');
+            }
+            peer.host = match[2] || match[4] || match[6];
+            peer.port = match[8];
+            crawlPeers(peer.host, peer.port, resultMap, resultsMapIP, next);
+          }
+        ], function() {
+          callback();
+        });
+      }, next);
     }], function(err) {
       done(err);
     });
