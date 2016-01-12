@@ -151,22 +151,22 @@ function vuCoin(host, port, intialized, options){
         },
 
         upstream: {
-          
+
           get: function (done) {
             getStream('/network/peering/peers/upstream', done);
           },
-          
+
           of: function (fingerprint, done) {
             getStream('/network/peering/peers/upstream/' + fingerprint, done);
           },
         },
 
         downstream: {
-          
+
           get: function (done) {
             getStream('/network/peering/peers/downstream', done);
           },
-          
+
           of: function (fingerprint, done) {
             getStream('/network/peering/peers/downstream/' + fingerprint, done);
           },
@@ -359,6 +359,7 @@ function vuCoin(host, port, intialized, options){
 
   function get(url, callback) {
     return require('request').get({
+      json: true,
       url: requestHead(url).url,
       timeout: options.timeout || 4000
     }, _(vucoin_result).partial(callback));
@@ -593,22 +594,26 @@ function vuCoin(host, port, intialized, options){
   intialized(null, this);
 
   function handleResponse(res, body, done) {
-    var err;
-    if(res.statusCode != 200){
-      if(res.statusCode == 400)
-        err = "400 - Bad request.";
-      else if(res.statusCode == 404)
-        err = "404 - Not found.";
-      else{
-        err = res.statusCode + " - Unknown error.";
-      }
-      err += "\n" + body;
-      done(err);
-    }
-    else{
+    if (res.statusCode === 200){
+      // Success
       var result = body;
-      try{ result = JSON.parse(body) } catch(ex) {}
+      if (typeof body == "string") {
+        try{ result = JSON.parse(body) } catch(ex) {}
+      }
       done(null, result, body);
+    }
+    else {
+      var err = {
+        httpCode: res.statusCode,
+        body: {}
+      };
+      // Error
+      if (typeof body == "object") {
+        err.body = body;
+      } else {
+        err.message = body;
+      }
+      done(err);
     }
   }
 
