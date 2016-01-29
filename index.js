@@ -25,20 +25,20 @@ function vuCoin(host, port, intialized, options){
 
     add: function (pubkey, self, other, done) {
       post('/wot/add', done)
-      .form({
-        "pubkey": pubkey,
-        "self": self,
-        "other": other
-      });
+        .form({
+          "pubkey": pubkey,
+          "self": self,
+          "other": other
+        });
     },
 
     revoke: function (pubkey, self, sig, done) {
       post('/wot/revoke', done)
-      .form({
-        "pubkey": pubkey,
-        "self": self,
-        "sig": sig
-      });
+        .form({
+          "pubkey": pubkey,
+          "self": self,
+          "sig": sig
+        });
     },
 
     lookup: function (search, done) {
@@ -691,13 +691,13 @@ ResultTypes.Lookup = {
     "uids": [{
       "uid": String,
       "meta": {
-        "timestamp": Number
+        "timestamp": String
       },
       "self": String,
       "others": [{
         "pubkey": String,
         "meta": {
-          "timestamp": Number
+          "timestamp": String
         },
         "signature": String
       }]
