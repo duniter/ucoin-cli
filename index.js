@@ -787,8 +787,8 @@ ResultTypes.Blocks = {
 };
 ResultTypes.Source = {
   "type": String,
-  "number": Number,
-  "fingerprint": String,
+  "noffset": Number,
+  "identifier": String,
   "amount": Number
 };
 ResultTypes.Sources = {
@@ -826,6 +826,7 @@ ResultTypes.Transaction = {
     "currency": String,
     "issuers": [String],
     "inputs": [String],
+    "unlocks": [String],
     "outputs": [String]
   }
 };
