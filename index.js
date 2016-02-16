@@ -789,7 +789,8 @@ ResultTypes.Source = {
   "type": String,
   "noffset": Number,
   "identifier": String,
-  "amount": Number
+  "amount": Number,
+  "base": Number
 };
 ResultTypes.Sources = {
   "pubkey": String,
