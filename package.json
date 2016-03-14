@@ -10,10 +10,6 @@
   "directories": {
     "test": "test"
   },
-  "scripts": {
-    "postinstall": "./postinstall.sh",
-    "postuninstall": "./postuninstall.sh"
-  },
   "repository": {
     "type": "git",
     "url": "git@github.com:c-geek/vucoin.git"
