@@ -6,7 +6,7 @@ platform:
   - x64
 
 install:
-  - ps: Install-Product node $env:nodejs_version
+  - ps: Install-Product node $env:nodejs_version $env:platform
   - node -v
   - npm install -g npm
   - npm install
