@@ -26,20 +26,20 @@
     "url": "https://github.com/c-geek/vucoin/issues"
   },
   "dependencies": {
-    "async": "",
-    "cli-table": "*",
-    "commander": "",
+    "async": "1.5.2",
+    "cli-table": "0.3.1",
+    "commander": "2.9.0",
     "hdc": "0.7.0",
     "inquirer": "0.5.0",
     "merkle": "0.1.0",
-    "mkdirp": "",
+    "mkdirp": "0.5.1",
     "moment": "2.8.3",
     "naclb": "1.3.1",
-    "request": "",
+    "request": "2.67.0",
     "scrypt": "6.0.1",
-    "sha1": "",
+    "sha1": "1.1.1",
     "tweetnacl": "0.11.2",
-    "underscore": ""
+    "underscore": "1.8.3"
   },
   "devDependencies": {
     "mocha": "",
