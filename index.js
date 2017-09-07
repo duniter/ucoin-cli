@@ -25,20 +25,20 @@ function vuCoin(host, port, intialized, options){
 
     add: function (pubkey, self, other, done) {
       post('/wot/add', done)
-      .form({
-        "pubkey": pubkey,
-        "self": self,
-        "other": other
-      });
+        .form({
+          "pubkey": pubkey,
+          "self": self,
+          "other": other
+        });
     },
 
     revoke: function (pubkey, self, sig, done) {
       post('/wot/revoke', done)
-      .form({
-        "pubkey": pubkey,
-        "self": self,
-        "sig": sig
-      });
+        .form({
+          "pubkey": pubkey,
+          "self": self,
+          "sig": sig
+        });
     },
 
     lookup: function (search, done) {
@@ -78,7 +78,7 @@ function vuCoin(host, port, intialized, options){
     },
 
     memberships: function (search, done) {
-      getMemberships('/blockchain/memberships/' + search, done);
+      getMemberships('/blockchain/memberships/' + search, done);qs
     },
 
     current: function (done) {
@@ -145,30 +145,28 @@ function vuCoin(host, port, intialized, options){
         },
 
         post: function (entry, done) {
-          var sigIndex = entry.indexOf("-----BEGIN");
           postPeer('/network/peering/peers', {
-            "entry": entry.substring(0, sigIndex),
-            "signature": entry.substring(sigIndex)
+            "peer": entry
           }, done);
         },
 
         upstream: {
-          
+
           get: function (done) {
             getStream('/network/peering/peers/upstream', done);
           },
-          
+
           of: function (fingerprint, done) {
             getStream('/network/peering/peers/upstream/' + fingerprint, done);
           },
         },
 
         downstream: {
-          
+
           get: function (done) {
             getStream('/network/peering/peers/downstream', done);
           },
-          
+
           of: function (fingerprint, done) {
             getStream('/network/peering/peers/downstream/' + fingerprint, done);
           },
@@ -361,6 +359,7 @@ function vuCoin(host, port, intialized, options){
 
   function get(url, callback) {
     return require('request').get({
+      json: true,
       url: requestHead(url).url,
       timeout: options.timeout || 4000
     }, _(vucoin_result).partial(callback));
@@ -595,22 +594,26 @@ function vuCoin(host, port, intialized, options){
   intialized(null, this);
 
   function handleResponse(res, body, done) {
-    var err;
-    if(res.statusCode != 200){
-      if(res.statusCode == 400)
-        err = "400 - Bad request.";
-      else if(res.statusCode == 404)
-        err = "404 - Not found.";
-      else{
-        err = res.statusCode + " - Unknown error.";
-      }
-      err += "\n" + body;
-      done(err);
-    }
-    else{
+    if (res.statusCode === 200){
+      // Success
       var result = body;
-      try{ result = JSON.parse(body) } catch(ex) {}
+      if (typeof body == "string") {
+        try{ result = JSON.parse(body) } catch(ex) {}
+      }
       done(null, result, body);
+    }
+    else {
+      var err = {
+        httpCode: res.statusCode,
+        body: {}
+      };
+      // Error
+      if (typeof body == "object") {
+        err.body = body;
+      } else {
+        err.message = body;
+      }
+      done(err);
     }
   }
 
@@ -688,13 +691,13 @@ ResultTypes.Lookup = {
     "uids": [{
       "uid": String,
       "meta": {
-        "timestamp": Number
+        "timestamp": String
       },
       "self": String,
       "others": [{
         "pubkey": String,
         "meta": {
-          "timestamp": Number
+          "timestamp": String
         },
         "signature": String
       }]
@@ -784,9 +787,10 @@ ResultTypes.Blocks = {
 };
 ResultTypes.Source = {
   "type": String,
-  "number": Number,
-  "fingerprint": String,
-  "amount": Number
+  "noffset": Number,
+  "identifier": String,
+  "amount": Number,
+  "base": Number
 };
 ResultTypes.Sources = {
   "pubkey": String,
@@ -823,6 +827,7 @@ ResultTypes.Transaction = {
     "currency": String,
     "issuers": [String],
     "inputs": [String],
+    "unlocks": [String],
     "outputs": [String]
   }
 };
